@@ -1,6 +1,6 @@
 {
   "name": "@caslanqa/playwright-ai-distro",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Standalone Playwright test automation framework with AI Judge capability for LLM response evaluation",
   "author": "CaslanQA",
   "license": "MIT",

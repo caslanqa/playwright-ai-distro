@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.0] - 2026-06-29
+
+- Version bump (major)
+
+
 All notable changes to this project will be documented in this file.
 
 ## [2.0.0] - 2026-06-29
