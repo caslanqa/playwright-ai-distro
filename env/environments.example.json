@@ -1,0 +1,30 @@
+{
+  "_note": "Per-environment test config. Select with TEST_ENV (default = common.DEFAULT_TEST_ENV). 'common' is merged into every env (with ${TEST_ENV.X} resolved from the selected env block). 'environments' holds per-app baseUrl + the env-specific API_HOST. User credentials/profile test data lives in testData/users.json and is flattened by loadEnv to CX_<APP>_<ROLE>_* process.env keys.",
+  "common": {
+    "DEFAULT_TEST_ENV": "dev",
+    "JUDGE_BASE_URL": "http://127.0.0.1:20128/v1",
+    "JUDGE_OLLAMA_BASE_URL": "http://127.0.0.1:11434/v1",
+    "JUDGE_MODEL": "local/qwen3.5:9b",
+    "JUDGE_OLLAMA_KEEP_ALIVE": "30m"
+  },
+  "environments": {
+    "dev": {
+      "API_HOST": "http://localhost:3000",
+      "myapp": {
+        "baseUrl": "http://localhost:3000"
+      }
+    },
+    "staging": {
+      "API_HOST": "https://staging.example.com",
+      "myapp": {
+        "baseUrl": "https://staging.example.com"
+      }
+    },
+    "production": {
+      "API_HOST": "https://app.example.com",
+      "myapp": {
+        "baseUrl": "https://app.example.com"
+      }
+    }
+  }
+}

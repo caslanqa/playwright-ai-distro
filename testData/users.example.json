@@ -1,0 +1,37 @@
+{
+  "_note": "User credentials per environment. Flattened by loadEnv to CX_<APP>_<ROLE>_<KEY> process.env keys. Example: environments.dev.myapp.roleType.qa.username -> CX_MYAPP_QA_USERNAME",
+  "environments": {
+    "dev": {
+      "apptype": {
+        "myapp": {
+          "roleType": {
+            "qa": {
+              "username": "qa@example.com",
+              "password": "qa_password_here"
+            },
+            "dev": {
+              "username": "dev@example.com",
+              "password": "dev_password_here"
+            }
+          }
+        }
+      }
+    },
+    "staging": {
+      "apptype": {
+        "myapp": {
+          "roleType": {
+            "qa": {
+              "username": "qa@staging.example.com",
+              "password": "staging_qa_password"
+            },
+            "dev": {
+              "username": "dev@staging.example.com",
+              "password": "staging_dev_password"
+            }
+          }
+        }
+      }
+    }
+  }
+}

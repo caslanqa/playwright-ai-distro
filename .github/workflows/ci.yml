@@ -1,0 +1,155 @@
+name: Playwright Tests with AI Judge
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Test environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
+      judge_model:
+        description: 'AI Judge model'
+        required: true
+        default: 'local/qwen3.5:9b'
+        type: string
+      browser:
+        description: 'Browser to test'
+        required: true
+        default: 'chromium'
+        type: choice
+        options:
+          - chromium
+          - firefox
+          - webkit
+          - all
+
+env:
+  TEST_ENV: ${{ github.event.inputs.environment || 'dev' }}
+  JUDGE_MODEL: ${{ github.event.inputs.judge_model || 'local/qwen3.5:9b' }}
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Setup Ollama (for local AI Judge)
+        if: startsWith(env.JUDGE_MODEL, 'local/')
+        run: |
+          # Install Ollama
+          curl -fsSL https://ollama.com/install.sh | sh
+          
+          # Start Ollama server
+          ollama serve &
+          
+          # Wait for Ollama to be ready
+          for i in {1..30}; do
+            if curl -s http://localhost:11434/api/tags > /dev/null; then
+              echo "Ollama is ready"
+              break
+            fi
+            sleep 1
+          done
+          
+          # Pull the model
+          MODEL_NAME="${JUDGE_MODEL#local/}"
+          ollama pull "$MODEL_NAME"
+          
+          # Warm up the model
+          curl -s http://localhost:11434/api/chat \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"model\": \"$MODEL_NAME\",
+              \"messages\": [{\"role\": \"user\", \"content\": \"hi\"}],
+              \"stream\": false,
+              \"think\": false,
+              \"keep_alive\": \"30m\",
+              \"options\": {\"num_predict\": 1}
+            }"
+
+      - name: Copy environment config
+        run: |
+          cp env/environments.example.json env/environments.json
+          cp testData/users.example.json testData/users.json
+
+      - name: Run Playwright tests
+        run: |
+          if [ "${{ github.event.inputs.browser }}" = "all" ]; then
+            npx playwright test
+          else
+            npx playwright test --project=${{ github.event.inputs.browser || 'chromium' }}
+          fi
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload Allure Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results
+          path: allure-results/
+          retention-days: 30
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 30
+
+  # Generate Allure Report
+  allure-report:
+    needs: test
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Download Allure Results
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results
+
+      - name: Generate Allure Report
+        uses: simple-elf/allure-report-action@master
+        if: always()
+        with:
+          allure_results: allure-results
+          allure_history: allure-history
+          keep_reports: 20
+
+      - name: Upload Allure Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: allure-report/
+          retention-days: 30

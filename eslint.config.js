@@ -1,0 +1,115 @@
+import tseslint from '@typescript-eslint/eslint-plugin';
+import tsparser from '@typescript-eslint/parser';
+import prettierConfig from 'eslint-config-prettier';
+import playwright from 'eslint-plugin-playwright';
+import prettier from 'eslint-plugin-prettier';
+
+export default [
+  // Ignore patterns
+  {
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'build/**',
+      'test-results/**',
+      'playwright-report/**',
+      'playwright/.cache/**',
+      '*.log',
+      'yarn.lock',
+      'pnpm-lock.yaml',
+    ],
+  },
+
+  // Base config for all TypeScript files
+  {
+    files: ['**/*.ts'],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: 2020,
+        sourceType: 'module',
+        project: './tsconfig.json',
+      },
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tseslint,
+      playwright: playwright,
+      prettier: prettier,
+    },
+    rules: {
+      ...tseslint.configs.recommended.rules,
+      ...prettierConfig.rules,
+
+      // TypeScript specific rules
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/no-namespace': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+      '@typescript-eslint/no-non-null-assertion': 'warn',
+
+      // General ESLint rules
+      'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
+      'no-debugger': 'warn',
+      'no-duplicate-imports': 'off',
+      'prefer-const': 'warn',
+      'no-var': 'error',
+
+      // Code style
+      'max-len': [
+        'warn',
+        {
+          code: 120,
+          ignoreComments: true,
+          ignoreStrings: true,
+          ignoreTemplateLiterals: true,
+        },
+      ],
+      'prefer-template': 'warn',
+      'object-shorthand': 'warn',
+      'arrow-body-style': ['warn', 'as-needed'],
+
+      // Prettier
+      'prettier/prettier': [
+        'error',
+        {
+          endOfLine: 'auto',
+        },
+      ],
+    },
+  },
+
+  // Playwright test files
+  {
+    files: ['**/*.spec.ts', '**/*.test.ts', 'tests/**/*.ts'],
+    plugins: {
+      playwright: playwright,
+    },
+    rules: {
+      ...playwright.configs['flat/recommended'].rules,
+      '@typescript-eslint/no-explicit-any': 'off',
+      'playwright/no-wait-for-timeout': 'off',
+      'playwright/no-conditional-expect': 'off',
+      'playwright/no-conditional-in-test': 'off',
+      'playwright/no-networkidle': 'off',
+      'playwright/no-wait-for-navigation': 'off',
+    },
+  },
+];

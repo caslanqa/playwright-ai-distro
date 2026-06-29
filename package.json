@@ -1,0 +1,112 @@
+{
+  "name": "create-playwright-ai-distro",
+  "version": "1.0.0",
+  "description": "Standalone Playwright test automation framework with AI Judge capability for LLM response evaluation",
+  "author": "CaslanQA",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "playwright",
+    "testing",
+    "e2e",
+    "ai",
+    "llm",
+    "judge",
+    "automation",
+    "ollama",
+    "chatbot-testing"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/caslanqa/playwright-ai-distro.git"
+  },
+  "bugs": {
+    "url": "https://github.com/caslanqa/playwright-ai-distro/issues"
+  },
+  "homepage": "https://github.com/caslanqa/playwright-ai-distro#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "bin": {
+    "create-playwright-ai-distro": "bin/create-project.cjs"
+  },
+  "files": [
+    "bin/",
+    "config/",
+    "docs/",
+    "env/",
+    "fixtures/",
+    "pages/",
+    "scripts/",
+    "testData/",
+    "tests/",
+    "utils/",
+    ".github/",
+    "playwright.config.ts",
+    "tsconfig.json",
+    "eslint.config.js",
+    ".prettierrc",
+    ".commitlintrc.json",
+    ".gitignore",
+    "README.md"
+  ],
+  "scripts": {
+    "clearReports": "rm -rf playwright-report test-results allure-report allure-results",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:ui": "playwright test --ui",
+    "test:parallel": "playwright test --workers=4",
+    "test:serial": "playwright test --workers=1",
+    "test:tag": "playwright test --workers=1 --project chromium --retries=0 --grep",
+    "report": "playwright show-report",
+    "report:allure": "allure serve allure-results",
+    "report:generate": "allure generate allure-results --output allure-report",
+    "codegen": "playwright codegen",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{ts,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
+    "type-check": "tsc --noEmit",
+    "commit": "cz",
+    "prepare": "husky",
+    "judge:start": "./scripts/ci/judge-services.sh start",
+    "judge:stop": "./scripts/ci/judge-services.sh stop",
+    "judge:status": "./scripts/ci/judge-services.sh status",
+    "judge:warm": "./scripts/ci/judge-services.sh warm"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,prettier}": [
+      "prettier --write"
+    ]
+  },
+  "dependencies": {
+    "@commitlint/cli": "^21.1.0",
+    "@commitlint/config-conventional": "^21.1.0",
+    "@types/node": "^24.13.2",
+    "@typescript-eslint/eslint-plugin": "^8.62.0",
+    "@typescript-eslint/parser": "^8.62.0",
+    "commitizen": "^4.3.2",
+    "dotenv": "^17.4.2",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-playwright": "^2.10.4",
+    "eslint-plugin-prettier": "^5.5.6",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.8.4",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "allure": "^3.13.1",
+    "allure-playwright": "^3.10.1",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "typescript": "^5.9.3"
+  }
+}
