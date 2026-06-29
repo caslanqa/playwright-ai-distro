@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.0.1] - 2026-06-29
+
+- Version bump (patch)
+
+
 ## [1.0.0] - 2026-06-29
 
 - Version bump (major)
