@@ -13,18 +13,18 @@ loadEnv();
  * @throws Error if key is not found and no default value is provided
  */
 export const getEnv = (key: string, defaultValue?: string): string => {
-    const value = process.env[key];
+  const value = process.env[key];
 
-    if (value === undefined) {
-        if (defaultValue !== undefined) {
-            return defaultValue;
-        }
-        throw new Error(`Environment variable "${key}" is not defined`);
+  if (value === undefined) {
+    if (defaultValue !== undefined) {
+      return defaultValue;
     }
+    throw new Error(`Environment variable "${key}" is not defined`);
+  }
 
-    // Remove surrounding quotes (both single and double) if present
-    // This handles cases where .env values are quoted
-    return value.replace(/^["']|["']$/g, '');
+  // Remove surrounding quotes (both single and double) if present
+  // This handles cases where .env values are quoted
+  return value.replace(/^["']|["']$/g, '');
 };
 
 /**
@@ -34,14 +34,14 @@ export const getEnv = (key: string, defaultValue?: string): string => {
  * @returns The environment variable value as a number
  */
 export const getEnvNumber = (key: string, defaultValue?: number): number => {
-    const value = getEnv(key, defaultValue?.toString());
-    const num = Number(value);
+  const value = getEnv(key, defaultValue?.toString());
+  const num = Number(value);
 
-    if (isNaN(num)) {
-        throw new Error(`Environment variable "${key}" must be a valid number, got "${value}"`);
-    }
+  if (isNaN(num)) {
+    throw new Error(`Environment variable "${key}" must be a valid number, got "${value}"`);
+  }
 
-    return num;
+  return num;
 };
 
 /**
@@ -51,8 +51,8 @@ export const getEnvNumber = (key: string, defaultValue?: number): number => {
  * @returns The environment variable value as a boolean
  */
 export const getEnvBoolean = (key: string, defaultValue?: boolean): boolean => {
-    const value = getEnv(key, defaultValue?.toString());
-    return value.toLowerCase() === 'true' || value === '1' || value === 'yes';
+  const value = getEnv(key, defaultValue?.toString());
+  return value.toLowerCase() === 'true' || value === '1' || value === 'yes';
 };
 
 /**
@@ -67,4 +67,4 @@ export const hasEnv = (key: string): boolean => process.env[key] !== undefined;
  * @returns An object containing all environment variables
  */
 export const getAllEnv = (): Record<string, string> =>
-    ({ ...process.env }) as Record<string, string>;
+  ({ ...process.env }) as Record<string, string>;

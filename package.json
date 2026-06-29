@@ -1,6 +1,6 @@
 {
-  "name": "create-playwright-ai-distro",
-  "version": "2.0.0",
+  "name": "@caslanqa/playwright-ai-distro",
+  "version": "0.0.1",
   "description": "Standalone Playwright test automation framework with AI Judge capability for LLM response evaluation",
   "author": "CaslanQA",
   "license": "MIT",
@@ -28,7 +28,7 @@
     "node": ">=18.0.0"
   },
   "bin": {
-    "create-playwright-ai-distro": "bin/create-project.cjs"
+    "@caslanqa/playwright-ai-distro": "bin/create-project.cjs"
   },
   "files": [
     "bin/",

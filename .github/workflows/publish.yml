@@ -28,7 +28,7 @@ on:
           - next
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '24'
 
 jobs:
   publish:
@@ -59,11 +59,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Run tests
-        run: |
-          npx playwright install --with-deps chromium
-          npm test -- --project=chromium || echo "Tests skipped (no test app configured)"
 
       - name: Lint check
         run: npm run lint || true

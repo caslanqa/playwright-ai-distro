@@ -9,9 +9,9 @@ export { UIUtils } from './uiUtils';
 
 export { judgeResponse } from './aiJudge';
 export type {
-    ChatCompletionResponse,
-    ChatJudgeCase,
-    JudgeInput,
-    JudgeVerdict,
-    JudgedCase,
+  ChatCompletionResponse,
+  ChatJudgeCase,
+  JudgeInput,
+  JudgeVerdict,
+  JudgedCase,
 } from './types';

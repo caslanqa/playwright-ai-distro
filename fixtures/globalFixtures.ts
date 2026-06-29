@@ -11,8 +11,8 @@ loadEnv();
  * These determine which storage state file to load.
  */
 export interface FixtureOptions {
-    appType: string;
-    roleType: string;
+  appType: string;
+  roleType: string;
 }
 
 /**
@@ -31,30 +31,30 @@ export interface FixtureOptions {
  * });
  */
 export const test = base.extend<FixtureOptions & { context: BrowserContext; page: Page }>({
-    // Default app type - override with test.use({ appType: 'other' })
-    appType: ['myapp', { option: true }],
+  // Default app type - override with test.use({ appType: 'other' })
+  appType: ['myapp', { option: true }],
 
-    // Default role type - override with test.use({ roleType: 'admin' })
-    roleType: ['qa', { option: true }],
+  // Default role type - override with test.use({ roleType: 'admin' })
+  roleType: ['qa', { option: true }],
 
-    // Context with storage state loaded based on app/role
-    context: async ({ browser, appType, roleType }, use) => {
-        const authFile = getAuthFilePath(appType, roleType);
+  // Context with storage state loaded based on app/role
+  context: async ({ browser, appType, roleType }, use) => {
+    const authFile = getAuthFilePath(appType, roleType);
 
-        const context = await browser.newContext({
-            storageState: authFile,
-        });
+    const context = await browser.newContext({
+      storageState: authFile,
+    });
 
-        await use(context);
-        await context.close();
-    },
+    await use(context);
+    await context.close();
+  },
 
-    // Page from the authenticated context
-    page: async ({ context }, use) => {
-        const page = await context.newPage();
-        await use(page);
-        await page.close();
-    },
+  // Page from the authenticated context
+  page: async ({ context }, use) => {
+    const page = await context.newPage();
+    await use(page);
+    await page.close();
+  },
 });
 
 export { expect } from '@playwright/test';
