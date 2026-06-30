@@ -149,10 +149,9 @@ jobs:
             ### Installation
 
             ```bash
-            npx create-playwright-ai-distro my-project
+            npm init @caslanqa/playwright-ai@latest my-project
             cd my-project
-            npm install
-            npx playwright install --with-deps
+            npm test
             ```
 
             ### Changes
@@ -162,7 +161,7 @@ jobs:
 
             ### Links
 
-            - [npm package](https://www.npmjs.com/package/create-playwright-ai-distro)
+            - [npm package](https://www.npmjs.com/package/@caslanqa/create-playwright-ai)
             - [Documentation](https://github.com/${{ github.repository }}#readme)
           draft: false
           prerelease: ${{ github.event.inputs.tag != 'latest' }}
@@ -181,7 +180,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Package | \`create-playwright-ai-distro\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | \`@caslanqa/create-playwright-ai\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Previous | \`${{ steps.current_version.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| New | \`${{ steps.bump_version.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Bump Type | \`${{ github.event.inputs.version_type }}\` |" >> $GITHUB_STEP_SUMMARY
@@ -190,6 +189,6 @@ jobs:
           if [ "${{ github.event.inputs.dry_run }}" == "false" ]; then
             echo "### Install" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-            echo "npx create-playwright-ai-distro@${{ steps.bump_version.outputs.version }} my-project" >> $GITHUB_STEP_SUMMARY
+            echo "npm init @caslanqa/playwright-ai@${{ steps.bump_version.outputs.version }} my-project" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           fi

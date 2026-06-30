@@ -11,11 +11,40 @@ A production-ready, standalone Playwright test automation framework with built-i
 - **Environment-Driven** - JSON-based configuration, zero hardcoded values
 - **Full CI/CD** - GitHub Actions with Ollama setup
 
-## 📦 Installation
+## 📦 Create a new project
+
+Scaffold a ready-to-run project with a single command — exactly like the
+official Playwright (`npm init playwright@latest`):
+
+```bash
+npm init @caslanqa/playwright-ai@latest my-project
+```
+
+Equivalent forms:
+
+```bash
+npm  create @caslanqa/playwright-ai@latest my-project
+npx  @caslanqa/create-playwright-ai my-project
+yarn create @caslanqa/playwright-ai my-project
+pnpm create @caslanqa/playwright-ai my-project
+```
+
+This copies the template, generates `package.json`, then automatically runs
+`npm install` and installs the Playwright browsers. When it finishes:
+
+```bash
+cd my-project
+npm test
+```
+
+Flags: `--no-install` (skip `npm install`), `--no-browsers` (skip browser
+download). Omit the project name to scaffold into the current directory.
+
+## 🛠️ Develop this framework (contributors)
 
 ```bash
 # Clone the repository
-git clone <repo-url>
+git clone https://github.com/caslanqa/playwright-ai-distro.git
 cd playwright-ai-distro
 
 # Install dependencies
