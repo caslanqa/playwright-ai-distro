@@ -141,11 +141,11 @@ check_status() {
   fi
   
   # 9Router status (if configured)
-  if [ -n "${JUDGE_BASE_URL:-}" ]; then
-    if curl -s "${JUDGE_BASE_URL}/models" > /dev/null 2>&1; then
-      echo -e "9Router: ${GREEN}Running${NC} (${JUDGE_BASE_URL})"
+  if [ -n "${JUDGE_GATEWAY_BASE_URL:-}" ]; then
+    if curl -s "${JUDGE_GATEWAY_BASE_URL}/models" > /dev/null 2>&1; then
+      echo -e "9Router: ${GREEN}Running${NC} (${JUDGE_GATEWAY_BASE_URL})"
     else
-      echo -e "9Router: ${YELLOW}Not reachable${NC} (${JUDGE_BASE_URL})"
+      echo -e "9Router: ${YELLOW}Not reachable${NC} (${JUDGE_GATEWAY_BASE_URL})"
     fi
   else
     echo -e "9Router: ${YELLOW}Not configured${NC}"

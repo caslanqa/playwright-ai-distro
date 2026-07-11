@@ -67,8 +67,7 @@ Edit `env/environments.json` to configure your test environments:
 ```json
 {
   "common": {
-    "DEFAULT_TEST_ENV": "dev",
-    "JUDGE_MODEL": "local/qwen3.5:9b"
+    "DEFAULT_TEST_ENV": "dev"
   },
   "environments": {
     "dev": {
@@ -83,26 +82,19 @@ Edit `env/environments.json` to configure your test environments:
 
 ### User Credentials
 
-Edit `testData/users.json` for test user credentials:
+Edit `testData/users.json` to declare named login sessions:
 
 ```json
 {
-  "environments": {
-    "dev": {
-      "apptype": {
-        "myapp": {
-          "roleType": {
-            "qa": {
-              "username": "qa@example.com",
-              "password": "your_password"
-            }
-          }
-        }
-      }
-    }
+  "users": {
+    "admin": { "username": "admin@example.com", "password": "your_password" },
+    "customer": { "username": "customer@example.com", "password": "your_password" }
   }
 }
 ```
+
+Sessions are logged in lazily on first use and cached to `.auth/<key>.json`; select one with
+`test.use({ session: 'admin' })`.
 
 ## 🧪 Running Tests
 
@@ -146,14 +138,29 @@ test('chatbot responds correctly', async () => {
 });
 ```
 
-### Model Options
+### Model Selection
 
-| Model | Cost | Speed | Best For |
-|-------|------|-------|----------|
-| `local/qwen3.5:9b` | Free | ~2-3s | Default, local testing |
-| `local/llama3.1:8b` | Free | ~2s | Fast local eval |
-| `gh/claude-sonnet-4-20250514` | Paid | ~1-2s | High accuracy |
-| `gh/gpt-4o` | Paid | ~1-2s | Alternative cloud |
+Model choice is **automatic** by default. The judge scores each call's complexity into a tier
+(`simple` / `medium` / `complex`) and resolves it to a concrete model **discovered at runtime** —
+never a hardcoded list:
+
+- **Local first:** the installed Ollama models are ranked by parameter size — smallest for
+  `simple`, largest for `complex`, median for `medium`. Nothing to configure; it adapts to
+  whatever you have pulled.
+- **Cloud fallback:** only when no compatible local model exists (e.g. an image needs a
+  vision-capable model and none is installed) does it fall back to a model discovered from the
+  9Router gateway (requires `JUDGE_API_KEY`).
+
+Override per call when you need control:
+
+```typescript
+await judgeResponse({ ...input, model: 'gh/claude-sonnet-4.6' }); // exact model (pins the judge)
+await judgeResponse({ ...input, tier: 'complex' }); // force a tier
+await judgeResponse({ ...input, verbose: true }); // attach routing trace to _meta
+```
+
+Set `JUDGE_MODEL` in `env/environments.json` to pin one model globally (disables auto-routing).
+Tune tiers, thresholds, and cloud preferences in `config/aiJudge.config.ts`.
 
 ## 📁 Project Structure
 
@@ -169,18 +176,17 @@ playwright-ai-distro/
 ├── env/                      # Environment config
 │   └── environments.json
 ├── fixtures/                 # Playwright fixtures
-│   └── globalFixtures.ts
+│   ├── globalFixtures.ts     # test/expect + `session` storageState-key option
+│   ├── auth.ts               # lazy session login + caching (authState, ensureSession)
+│   └── aiExpect.ts           # expectAi matchers
 ├── pages/                    # Page Object Models
 │   ├── BasePage.ts
 │   └── LoginPage.ts
 ├── scripts/ci/               # CI scripts
 │   └── judge-services.sh
-├── testData/                 # Test data
+├── testData/                 # Named login sessions
 │   └── users.json
 ├── tests/
-│   ├── setup/                # Auth setup
-│   │   ├── auth.helper.ts
-│   │   └── auth.setup.ts
 │   └── example/              # Example tests
 ├── utils/                    # Utilities
 │   ├── aiJudge.ts            # AI Judge core
@@ -193,16 +199,28 @@ playwright-ai-distro/
 
 ## 🔐 Authentication
 
-The framework uses multi-worker safe authentication with file-based mutex:
+Session-based, opt-in, and **lazy**. Declare named sessions in `testData/users.json`; a test opts in
+with `test.use({ session: 'admin' })`. The first test that uses a session logs in once and caches
+`.auth/<key>.json`; every later test and run reuses it — no repeated logins, no setup project.
+Unauthenticated tests (e.g. public pages) set nothing.
 
 ```typescript
-// tests/setup/auth.setup.ts
-setup('authenticate myapp/qa', async ({ page, context }) => {
-  await ensureAuthFile(context, 'myapp', 'qa', async () => {
-    const creds = getCredentials('myapp', 'qa');
-    await authenticate(page, creds);
-  });
+// Select a session for a test or a whole describe:
+test.use({ session: 'admin' });
+
+test('admin sees the dashboard', async ({ page }) => {
+  await page.goto('/dashboard'); // already signed in as admin
 });
+```
+
+The login flow lives in `fixtures/auth.ts` → `loginSession` (customize it; the generic branch uses
+`pages/LoginPage` with credentials from `testData/users.json`). For cross-role tests, open
+independent contexts — `ensureSession` performs the lazy login first:
+
+```typescript
+import { authState, ensureSession } from '@fixtures/auth';
+await ensureSession(browser, 'admin');
+const adminCtx = await browser.newContext({ storageState: authState('admin') });
 ```
 
 ## 📊 Reporters
@@ -248,10 +266,10 @@ test('user can view dashboard', async ({ page }) => {
 });
 ```
 
-### Test with Different Role
+### Test with a Different Session
 
 ```typescript
-test.use({ appType: 'myapp', roleType: 'admin' });
+test.use({ session: 'admin' });
 
 test('admin can access settings', async ({ page }) => {
   await page.goto('/admin/settings');
@@ -299,7 +317,7 @@ Trigger manually with custom options:
 workflow_dispatch:
   inputs:
     environment: dev|staging|production
-    judge_model: local/qwen3.5:9b
+    judge_model: <optional pin, e.g. local/qwen3.5; empty = auto-routing>
     browser: chromium|firefox|webkit|all
 ```
 

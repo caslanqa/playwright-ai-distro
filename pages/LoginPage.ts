@@ -126,6 +126,15 @@ export class LoginPage extends BasePage {
     }
 
     /**
+     * Navigate to the login page, sign in, and wait for the post-login URL. Single entry point the
+     * auth flow uses to establish a session (implements the fixtures' SessionLogin contract).
+     */
+    async signIn(username: string, password: string): Promise<void> {
+        await this.goto();
+        await this.loginAndWaitForUrl(username, password);
+    }
+
+    /**
      * Check remember me checkbox
      */
     async checkRememberMe(): Promise<void> {

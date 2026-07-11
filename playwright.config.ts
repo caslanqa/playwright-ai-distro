@@ -10,7 +10,7 @@ loadEnv();
  *
  * Key features:
  * - Multi-project setup for different browsers
- * - Auth setup project runs first to create storage states
+ * - Lazy session auth: storage states created on first use and cached (fixtures/auth.ts)
  * - Environment-driven baseURL from loadEnv
  * - Parallel execution with worker isolation
  * - Multiple reporters (HTML, Allure, JSON)
@@ -74,7 +74,7 @@ export default defineConfig({
         baseURL: process.env.API_HOST || 'http://localhost:3000',
 
         // Browser options
-        headless: true,
+        headless: false,
         viewport: { width: 1280, height: 720 },
         ignoreHTTPSErrors: true,
 
@@ -97,28 +97,19 @@ export default defineConfig({
     // Project definitions
     projects: [
         // ============================================
-        // SETUP PROJECT - Runs first to create auth states
-        // ============================================
-        {
-            name: 'setup',
-            testDir: './tests/setup',
-            testMatch: /.*\.setup\.ts/,
-        },
-
-        // ============================================
-        // BROWSER PROJECTS - Depend on setup
+        // BROWSER PROJECTS
         // ============================================
         {
             name: 'chromium',
             use: {
                 ...devices['Desktop Chrome'],
-                // Use storage state created by setup project
-                // storageState: '.auth/myapp_qa.json',
+                // Auth is per-test and lazy: opt in with `test.use({ session: 'admin' })`. The first
+                // test using a session logs in once and caches .auth/<session>.json; later tests and
+                // runs reuse it — no setup project or global storageState needed.
             },
-            dependencies: ['setup'],
         },
 
-        {
+        /*{
             name: 'firefox',
             use: {
                 ...devices['Desktop Firefox'],
@@ -165,7 +156,7 @@ export default defineConfig({
                 baseURL: process.env.API_HOST || 'http://localhost:3000',
             },
             // No browser setup dependency
-        },
+        },*/
     ],
 
     // Web server configuration (optional - start your app before tests)

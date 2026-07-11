@@ -1,15 +1,7 @@
 import { test, expect } from '@fixtures/globalFixtures';
+import { expectAi } from '@fixtures/aiExpect';
 import { judgeResponse } from '@utils/aiJudge';
 import type { ChatJudgeCase } from '@utils/types';
-
-/**
- * Example AI Judge tests demonstrating various use cases.
- *
- * Prerequisites:
- * 1. Ollama installed and running: ollama serve
- * 2. Model pulled: ollama pull qwen3.5:9b
- * 3. Or use: ./scripts/ci/judge-services.sh start
- */
 
 test.describe('AI Judge Examples', () => {
     test('basic response evaluation', async () => {
@@ -52,14 +44,31 @@ test.describe('AI Judge Examples', () => {
         expect(verdict.pass, verdict.reasoning).toBeTruthy();
     });
 
-    test('model override for specific test', async () => {
+    test('automatic routing with verbose trace', async () => {
         const verdict = await judgeResponse({
             userMessage: 'Explain quantum computing',
             botResponse:
                 'Quantum computing uses quantum bits (qubits) that can exist in multiple states simultaneously through superposition.',
             rubric: 'Must mention qubits and superposition.',
-            // Override model for this specific test
-            model: 'local/qwen3.5:9b',
+            // No model/tier: the judge picks a tier from complexity and a concrete model from the
+            // installed Ollama models. `verbose` attaches the routing trace for debugging.
+            verbose: true,
+        });
+
+        expect(verdict.pass, verdict.reasoning).toBeTruthy();
+        console.log(
+            `[routing] tier=${verdict._meta?.tier} model=${verdict._meta?.selectedModel} ` +
+                `score=${verdict._meta?.score} reasons=[${verdict._meta?.reasons.join('; ')}]`
+        );
+    });
+
+    test('manual tier override', async () => {
+        const verdict = await judgeResponse({
+            userMessage: 'What time do you open?',
+            botResponse: 'We open at 9am every day.',
+            rubric: 'Must state the store opens at 9am.',
+            // Force a tier explicitly; resolved to a concrete model via config/dynamic assignment.
+            tier: 'simple',
         });
 
         expect(verdict.pass, verdict.reasoning).toBeTruthy();
@@ -90,7 +99,7 @@ test.describe('Table-Driven AI Judge Tests', () => {
 
     // Mock bot responses for demonstration
     const mockResponses: Record<string, string> = {
-        greeting: 'Hello! Welcome to our store. How can I help you today?',
+        'greeting response': 'Hello! Welcome to our store. How can I help you today?',
         'product inquiry - valid': 'Yes, we carry a wide selection of laptops from various brands.',
         'return policy':
             'You can return items within 30 days of purchase with receipt. Items must be unused.',
@@ -111,9 +120,6 @@ test.describe('Table-Driven AI Judge Tests', () => {
             } else {
                 expect(verdict.pass, `Expected failure but passed: ${verdict.reasoning}`).toBeFalsy();
             }
-
-            // Log for debugging
-            console.log(`[${c.name}] Score: ${verdict.score}, Pass: ${verdict.pass}`);
         });
     }
 });
@@ -146,5 +152,72 @@ The link expires in 24 hours. Contact support if you need help.`,
 
         // Minimal response should score lower
         expect(verdict.score).toBeLessThan(60);
+    });
+});
+
+// Baseline images shipped for the compare-mode examples (see tests/example/assets/).
+const BADGE_SAVED = 'tests/example/assets/badge-saved.png';
+const BADGE_ERROR = 'tests/example/assets/badge-error.png';
+
+test.describe('expectAi Custom Matchers', () => {
+    // toPassRubric — the everyday assertion. Judges the input inline; on failure the message
+    // carries the judge's own reasoning.
+    test('toPassRubric — passes a good response', async () => {
+        await expectAi({
+            userMessage: 'What are your store hours?',
+            botResponse: 'We are open Monday to Friday, 9am to 5pm.',
+            rubric: 'Response must state weekday operating hours.',
+        }).toPassRubric();
+    });
+
+    // toPassRubric with a minimum score threshold.
+    test('toPassRubric — with a minimum score', async () => {
+        await expectAi({
+            userMessage: 'How do I reset my password?',
+            botResponse: 'Open Settings → Security → Reset password, then follow the emailed link.',
+            rubric: 'Must give clear password-reset steps.',
+        }).toPassRubric({ minScore: 60 });
+    });
+
+    // .not — assert a response should FAIL the rubric (negative cases).
+    test('not.toPassRubric — flags a rubric miss', async () => {
+        await expectAi({
+            userMessage: 'What are your store hours?',
+            botResponse: 'We are open during business hours.',
+            rubric: 'Response must include specific opening and closing times.',
+        }).not.toPassRubric();
+    });
+
+    // Judge once, assert many: reuse a single verdict across matchers (one judge call).
+    test('toScoreAtLeast — on a reused verdict', async () => {
+        const verdict = await judgeResponse({
+            userMessage: 'How do I reset my password?',
+            botResponse:
+                'Go to the login page, click "Forgot Password", enter your email, and follow the reset link.',
+            rubric: 'Must give step-by-step password reset instructions.',
+        });
+
+        await expectAi(verdict).toPassRubric();
+        await expectAi(verdict).toScoreAtLeast(60);
+    });
+
+    // Override routing per assertion — the `model` / `tier` options bypass auto-routing.
+    test('override tier per assertion', async () => {
+        await expectAi({
+            userMessage: 'Explain quantum computing',
+            botResponse: 'It uses qubits in superposition to represent multiple states at once.',
+            rubric: 'Must mention qubits and superposition.',
+        }).toPassRubric({ tier: 'simple' });
+    });
+
+    // toMatchImage — compare mode: check an image against a baseline instead of a text rubric.
+    // In real use `image` is your live `await page.screenshot()`. Visual comparison is demanding,
+    // so force a stronger model for reliability.
+    test('toMatchImage — matches a baseline image', async () => {
+        await expectAi({ image: BADGE_SAVED }).toMatchImage(BADGE_SAVED, { tier: 'complex' });
+    });
+
+    test('not.toMatchImage — flags a different image', async () => {
+        await expectAi({ image: BADGE_SAVED }).not.toMatchImage(BADGE_ERROR, { tier: 'complex' });
     });
 });
