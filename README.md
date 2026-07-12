@@ -236,7 +236,6 @@ playwright-ai-distro/
 │   ├── aiExpect.ts           #   expectAi matchers
 │   └── apiFixtures.ts        #   apiClient + service fixtures (browser-free)
 ├── pages/                    # Page Object Models (BasePage, LoginPage)
-├── scripts/ci/               # judge-services.sh
 ├── testData/                 # users.json (named login sessions)
 ├── tests/
 │   ├── example/              #   UI + AI Judge examples

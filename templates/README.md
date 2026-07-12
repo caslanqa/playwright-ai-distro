@@ -17,14 +17,21 @@ It ships with three ready-to-use testing layers and full developer tooling:
 
 ## Getting started
 
-Dependencies were installed by the scaffolder. Point the config at your app and run:
+Dependencies were installed by the scaffolder. Create your machine-local config from the tracked
+examples (these real files are gitignored), edit them, then run:
 
 ```bash
-# 1. Edit env/environments.json  → BASE_URL (UI) and API_BASE_URL (API)
-# 2. Edit testData/users.json     → your login sessions (if you use auth)
+# 1. Create local config from the examples:
+cp env/environments.example.json env/environments.json
+cp testData/users.example.json testData/users.json
 
-npm test                 # run everything
-npm run test:api         # API tests only (no browser needed)
+# 2. Edit them:
+#    env/environments.json  → BASE_URL (UI) + API_BASE_URL (API)
+#    testData/users.json    → your login sessions (optional)
+
+# 3. Run:
+npm test                 # everything
+npm run test:api         # API only (no browser needed)
 npm run test:ui          # interactive UI mode
 ```
 

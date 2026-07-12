@@ -59,7 +59,6 @@ const DIRS_TO_COPY = [
   'env',
   'fixtures',
   'pages',
-  'scripts',
   'testData',
   'tests',
   'utils',
@@ -107,10 +106,6 @@ const createPackageJson = (projectName, devDependencies) => ({
     'format:check': 'prettier --check "**/*.{ts,js,json,md}"',
     'type-check': 'tsc --noEmit',
     prepare: 'husky',
-    'judge:start': './scripts/ci/judge-services.sh start',
-    'judge:stop': './scripts/ci/judge-services.sh stop',
-    'judge:status': './scripts/ci/judge-services.sh status',
-    'judge:warm': './scripts/ci/judge-services.sh warm',
   },
   devDependencies,
   'lint-staged': {
@@ -372,19 +367,9 @@ ${colors.cyan}╔═════════════════════
   fs.mkdirSync(path.join(targetDir, '.auth'), { recursive: true });
   log.success('Created .auth directory');
 
-  // Materialize the real (non-.example) config files
-  const envSrc = path.join(targetDir, 'env/environments.example.json');
-  const envDest = path.join(targetDir, 'env/environments.json');
-  if (fs.existsSync(envSrc)) {
-    fs.copyFileSync(envSrc, envDest);
-  }
-
-  const usersSrc = path.join(targetDir, 'testData/users.example.json');
-  const usersDest = path.join(targetDir, 'testData/users.json');
-  if (fs.existsSync(usersSrc)) {
-    fs.copyFileSync(usersSrc, usersDest);
-  }
-  log.success('Created environment config files');
+  // NOTE: the real config files (env/environments.json, testData/users.json) are intentionally NOT
+  // created here — they are gitignored, machine-local, and often hold credentials. The user copies
+  // them from the shipped *.example.json (see the `cp` lines in "Next steps" below) and edits them.
 
   // Husky git hooks — activated by the generated project's `prepare: husky` on install: run
   // lint-staged before each commit and commitlint on the commit message. (lint-staged config lives
@@ -405,16 +390,6 @@ ${colors.cyan}╔═════════════════════
     }
   }
   log.success('Created husky hooks (pre-commit, commit-msg)');
-
-  // Make the judge helper script executable
-  const scriptPath = path.join(targetDir, 'scripts/ci/judge-services.sh');
-  if (fs.existsSync(scriptPath)) {
-    try {
-      fs.chmodSync(scriptPath, '755');
-    } catch {
-      // Ignore chmod errors (e.g. on Windows)
-    }
-  }
 
   // Initialize a git repo before installing, so husky can wire up its hooks during `prepare`
   // (husky needs a .git dir). Best-effort — if git is missing or it's already a repo, skip.
@@ -461,6 +436,9 @@ ${colors.cyan}╔═════════════════════
   if (!doBrowsers || !installed) {
     steps.push('npx playwright install');
   }
+  // Create the machine-local config from the shipped examples, then edit + run.
+  steps.push('cp env/environments.example.json env/environments.json    # then set BASE_URL / API_BASE_URL');
+  steps.push('cp testData/users.example.json testData/users.json        # then set your login sessions');
   steps.push('npm test');
   const manualSteps = steps.map(s => `\n  ${colors.yellow}${s}${colors.reset}`).join('');
 
@@ -472,7 +450,7 @@ ${colors.cyan}Next steps:${colors.reset}${manualSteps}
 ${colors.cyan}For AI Judge:${colors.reset}
 
   1. Install Ollama: ${colors.blue}https://ollama.com${colors.reset}
-  2. ${colors.yellow}npm run judge:start${colors.reset}
+  2. ${colors.yellow}ollama serve${colors.reset}  (then pull a model, e.g. ${colors.yellow}ollama pull qwen3.5${colors.reset})
   3. ${colors.yellow}npx playwright test tests/example/aiJudge.spec.ts${colors.reset}
 
 ${colors.cyan}Documentation:${colors.reset}

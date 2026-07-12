@@ -9,16 +9,16 @@
   },
   "environments": {
     "dev": {
-      "BASE_URL": "http://localhost:3000",
+      "BASE_URL": "https://www.saucedemo.com/",
       "API_BASE_URL": "https://petstore3.swagger.io/api/v3"
     },
     "staging": {
-      "BASE_URL": "https://staging.example.com",
-      "API_BASE_URL": "https://staging.example.com/api/v3"
+      "BASE_URL": "https://www.saucedemo.com/",
+      "API_BASE_URL": "https://petstore3.swagger.io/api/v3"
     },
     "production": {
-      "BASE_URL": "https://app.example.com",
-      "API_BASE_URL": "https://app.example.com/api/v3"
+      "BASE_URL": "https://www.saucedemo.com/",
+      "API_BASE_URL": "https://petstore3.swagger.io/api/v3"
     }
   }
 }

@@ -43,7 +43,6 @@
     "env/environments.example.json",
     "fixtures/",
     "pages/",
-    "scripts/",
     "templates/",
     "testData/users.example.json",
     "tests/",

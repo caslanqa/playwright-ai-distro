@@ -63,11 +63,8 @@ curl -fsSL https://ollama.com/install.sh | sh
 # Start Ollama server
 ollama serve
 
-# In another terminal, pull the default model
+# In another terminal, pull a model (any installed model is auto-discovered)
 ollama pull qwen3.5
-
-# Or use the helper script
-./scripts/ci/judge-services.sh start local/qwen3.5
 ```
 
 ### 3. Configure Environment
@@ -363,8 +360,8 @@ for (const c of cases) {
 ### 1. Warm Up the Model
 
 ```bash
-# Before running tests
-./scripts/ci/judge-services.sh warm local/qwen3.5
+# Load the model into memory before running tests
+ollama run qwen3.5 "ok"
 ```
 
 ### 2. Set Keep-Alive
@@ -431,9 +428,8 @@ For faster CI, use a self-hosted runner with:
 # Check if Ollama is running
 curl http://localhost:11434/api/tags
 
-# Restart Ollama
-./scripts/ci/judge-services.sh stop
-./scripts/ci/judge-services.sh start
+# Restart Ollama (stop the server, then start it again)
+pkill ollama; ollama serve
 ```
 
 ### Slow Response Times

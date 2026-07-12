@@ -2,11 +2,11 @@
   "_note": "Named login sessions. Copy to testData/users.json (gitignored). Sessions are logged in lazily on first use (via pages/LoginPage) and cached to .auth/<key>.json; select one in a test with test.use({ session: '<key>' }). Values below are the public saucedemo.com placeholder creds so the examples run out of the box — replace with your app's users.",
   "users": {
     "demoUser": {
-      "username": "standard_user",
+      "username": "visual_user",
       "password": "secret_sauce"
     },
     "adminUser": {
-      "username": "standard_user",
+      "username": "performance_glitch_user",
       "password": "secret_sauce"
     },
     "customerUser": {
