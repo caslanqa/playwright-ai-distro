@@ -66,7 +66,9 @@ function createAndroid(name, api) {
   const sdkmanager = sdkTool(sdk, 'cmdline-tools/latest/bin', 'sdkmanager');
   const avdmanager = sdkTool(sdk, 'cmdline-tools/latest/bin', 'avdmanager');
   if (!sdkmanager || !avdmanager) {
-    log.err('sdkmanager/avdmanager not found — install the "Android SDK Command-line Tools" (Android Studio → SDK Manager).');
+    log.err(
+      'sdkmanager/avdmanager not found — install the "Android SDK Command-line Tools" (Android Studio → SDK Manager).'
+    );
     process.exit(1);
   }
 
@@ -82,11 +84,16 @@ function createAndroid(name, api) {
 
   log.info(`Creating AVD "${name}" from ${image}...`);
   // `no` declines the "custom hardware profile?" prompt.
-  execSync(`echo no | "${avdmanager}" create avd -n "${name}" -k "${image}" --device pixel_7 --force`, {
-    stdio: 'inherit',
-  });
+  execSync(
+    `echo no | "${avdmanager}" create avd -n "${name}" -k "${image}" --device pixel_7 --force`,
+    {
+      stdio: 'inherit',
+    }
+  );
   log.ok(`Created AVD "${name}".`);
-  log.info(`Add it to mobile/devices.ts, e.g.  myDevice: { platform: 'android', device: '${name}' }`);
+  log.info(
+    `Add it to mobile/devices.ts, e.g.  myDevice: { platform: 'android', device: '${name}' }`
+  );
 }
 
 function createIos(name, deviceType) {
@@ -98,7 +105,9 @@ function createIos(name, deviceType) {
   }
 
   // Pick the newest installed iOS runtime.
-  const runtimes = JSON.parse(execFileSync('xcrun', ['simctl', 'list', 'runtimes', '-j'], { encoding: 'utf8' }))
+  const runtimes = JSON.parse(
+    execFileSync('xcrun', ['simctl', 'list', 'runtimes', '-j'], { encoding: 'utf8' })
+  )
     .runtimes.filter(r => r.isAvailable && /iOS/.test(r.name))
     .sort((a, b) => (a.version < b.version ? 1 : -1));
   if (runtimes.length === 0) {

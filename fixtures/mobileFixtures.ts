@@ -76,8 +76,8 @@ export const test = base.extend<MobileOptions & MobileFixtures>({
     if (!device) {
       testInfo.skip(
         true,
-        `[mobile] no booted ${platform} device — set MOBILE_DEVICE (or test.use({ mobile: { device } })) ` +
-          'to auto-boot one, or boot a device manually. See docs/MOBILE_TESTING.md'
+        `[mobile] no ${platform} device available — name one via the mobile option to auto-boot it, ` +
+          'create one with `npm run mobile:create-device`, or boot a device manually. See docs/MOBILE_TESTING.md'
       );
       return;
     }

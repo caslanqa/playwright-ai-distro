@@ -1,8 +1,8 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 
-import { adbPath, avdNameForSerial, bootAndroidAvd } from './android';
-import { bootIosSim } from './ios';
+import { adbPath, avdNameForSerial, bootAndroidAvd, listAvds } from './android';
+import { bootIosSim, resolveSimUdid } from './ios';
 import type { DiscoveredDevice, MobilePlatform } from './types';
 
 const execFileAsync = promisify(execFile);
@@ -29,9 +29,17 @@ export class DeviceManager {
       return null; // nothing booted and nothing named to boot → caller skips gracefully
     }
 
+    // A device was named but isn't booted. Boot it if it EXISTS; if it doesn't, return null so the
+    // caller skips (with a "create it" hint) instead of hard-failing on a missing AVD/simulator.
     if (platform === 'android') {
+      if (!listAvds().includes(deviceName)) {
+        return null;
+      }
       await bootAndroidAvd(deviceName);
     } else {
+      if (!(await resolveSimUdid(deviceName))) {
+        return null;
+      }
       await bootIosSim(deviceName);
     }
     return this.findBooted(platform, deviceName);
