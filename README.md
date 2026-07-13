@@ -18,11 +18,25 @@ npm init @caslanqa/playwright-ai@latest my-project
 - **AI Judge System** - Evaluate chatbot/LLM responses using local or cloud models
 - **Dual LLM Routing** - Ollama (local, free) or 9Router gateway (Claude, GPT)
 - **Layered API Testing** - `ApiClient` → service → test structure (Petstore v3 example)
+- **Mobile Testing** - Maestro YAML flows orchestrated by Playwright, opt-in (`--mobile`)
 - **Lazy Session Auth** - Cached storageState per session, worker-safe, opt-in
 - **Page Object Model** - Clean, maintainable test structure
 - **Environment-Driven** - JSON-based configuration, zero hardcoded values
 - **Full Tooling** - ESLint, Prettier, husky + lint-staged, commitlint out of the box
 - **Full CI/CD** - GitHub Actions with Ollama setup
+
+## 🧰 Requirements
+
+Only **Node.js ≥ 18** is always required. Everything else is per-feature and installed by _you_ (the
+scaffolder installs the npm deps + Playwright browsers, but not these system-level tools):
+
+| For             | You need                                                                                                                         |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Everything      | **Node.js ≥ 18**                                                                                                                 |
+| UI tests        | Playwright browsers — `npx playwright install`                                                                                   |
+| API tests       | nothing beyond Node (they call an HTTP endpoint)                                                                                 |
+| AI Judge        | [Ollama](https://ollama.com) + a pulled model (local), **or** a 9Router gateway + `JUDGE_API_KEY`                                |
+| Mobile (opt-in) | [Maestro](https://maestro.mobile.dev) CLI + **Java 17+**, and a device: Android SDK + emulator, or (macOS) Xcode + iOS simulator |
 
 ## 📦 Create a new project
 
@@ -59,8 +73,8 @@ npm run test:ui       # interactive UI mode
 ```
 
 Flags: `--no-install` (skip `npm install`), `--no-browsers` (skip browser download), `--no-gha` (skip
-the GitHub Actions workflow), `-y/--yes` (accept defaults). Omit the project name to scaffold into the
-current directory.
+the GitHub Actions workflow), `--mobile` (include mobile testing / Maestro), `-y/--yes` (accept
+defaults). Omit the project name to scaffold into the current directory.
 
 ## 🛠️ Develop this framework (contributors)
 
@@ -194,7 +208,7 @@ Tune tiers, thresholds, and cloud preferences in `config/aiJudge.config.ts`.
 A layered structure keeps HTTP details in one place and tests readable. See
 [docs/API_TESTING.md](docs/API_TESTING.md); the example targets [Petstore v3](https://petstore3.swagger.io).
 
-```
+```text
 tests/api/*.api.ts          # layer 3 — tests speak business language via services
 api/services/PetService.ts  # layer 2 — business operations (fetch, CRUD, derived queries)
 api/core/ApiClient.ts       # layer 1 — typed get/post/put/patch/delete over APIRequestContext
@@ -213,9 +227,32 @@ test('available pets are all "available"', async ({ petService }) => {
 });
 ```
 
+## 📱 Mobile Testing
+
+Mobile tests are [Maestro](https://maestro.mobile.dev) YAML flows orchestrated by Playwright (Maestro
+is the mobile engine, invoked via its CLI — no npm dependency). **Opt-in**: scaffold with `--mobile`.
+Tests read like the UI/API tests — see [docs/MOBILE_TESTING.md](docs/MOBILE_TESTING.md).
+
+```typescript
+import { test } from '@fixtures/mobileFixtures';
+import { devices } from '@mobile/devices'; // typed device catalog — mobile/devices.ts
+
+test.describe('Login — Android', () => {
+  test.use({ mobile: devices.pixel7 }); // auto-boots the AVD if it isn't running
+
+  test('signs in', async ({ maestro }) => {
+    await maestro.run('tests/mobile/flows/android/login.yaml');
+  });
+});
+```
+
+Runs serially in the browser-free `mobile` project: `npm run test:mobile`. A catalogued `device`
+auto-boots (Android AVD / iOS simulator); with none available the tests **skip** (don't fail). No
+device yet? `npm run mobile:create-device` builds one from your installed SDK/Xcode.
+
 ## 📁 Project Structure
 
-```
+```text
 playwright-ai-distro/
 ├── .auth/                    # Storage state files (gitignored)
 ├── .github/workflows/        # CI/CD pipelines
@@ -228,23 +265,27 @@ playwright-ai-distro/
 │   ├── loadEnv.ts
 │   ├── envUtils.ts
 │   └── aiJudge.config.ts     # tiers, thresholds, routing preferences
-├── docs/                     # AI_JUDGE.md · API_TESTING.md
+├── docs/                     # AI_JUDGE.md · API_TESTING.md · MOBILE_TESTING.md
 ├── env/                      # environments.json (BASE_URL, API_BASE_URL)
 ├── fixtures/                 # Playwright fixtures
 │   ├── globalFixtures.ts     #   test/expect + `session` storageState-key option
 │   ├── auth.ts               #   lazy session login + caching (authState, ensureSession)
 │   ├── aiExpect.ts           #   expectAi matchers
-│   └── apiFixtures.ts        #   apiClient + service fixtures (browser-free)
+│   ├── apiFixtures.ts        #   apiClient + service fixtures (browser-free)
+│   └── mobileFixtures.ts     #   maestro fixture + `mobile` option (opt-in)
+├── mobile/                   # Mobile testing (Maestro) — opt-in
+│   └── core/                 #   MaestroRunner + DeviceManager (adb/simctl, auto-boot)
 ├── pages/                    # Page Object Models (BasePage, LoginPage)
 ├── testData/                 # users.json (named login sessions)
 ├── tests/
 │   ├── example/              #   UI + AI Judge examples
-│   └── api/                  #   API examples (*.api.ts)
+│   ├── api/                  #   API examples (*.api.ts)
+│   └── mobile/               #   Maestro flows + *.mobile.ts (opt-in)
 ├── utils/
 │   ├── ai/                   #   AI Judge engine (router, providers, judge)
 │   ├── aiJudge.ts            #   judge entrypoint (re-exports utils/ai)
 │   └── *.ts                  #   date/string/wait/validation helpers
-├── playwright.config.ts      # chromium + api projects
+├── playwright.config.ts      # chromium + api (+ mobile when scaffolded)
 └── eslint.config.js · .prettierrc · .commitlintrc.json
 ```
 
@@ -380,6 +421,7 @@ workflow_dispatch:
 
 - [AI Judge Guide](docs/AI_JUDGE.md) - Detailed AI Judge documentation
 - [API Testing Guide](docs/API_TESTING.md) - Layered API client/service/test structure
+- [Mobile Testing Guide](docs/MOBILE_TESTING.md) - Maestro flows orchestrated by Playwright
 - [Playwright Docs](https://playwright.dev/docs/intro) - Official Playwright docs
 
 ## 📄 License
