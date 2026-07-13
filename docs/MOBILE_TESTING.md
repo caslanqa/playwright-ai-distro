@@ -4,6 +4,9 @@ Mobile tests are authored as [Maestro](https://maestro.mobile.dev) YAML flows an
 Playwright: **Playwright is the runner/reporter, Maestro is the mobile execution engine** (invoked as
 a CLI — no npm dependency). It's the fourth engine alongside web, API, and the AI Judge.
 
+> In a hurry? The [Mobile Cheat Sheet](MOBILE_CHEATSHEET.md) has the day-to-day commands — listing
+> device/app IDs, booting/installing, and the Maestro CLI.
+
 ## How it fits together
 
 ```text
@@ -127,6 +130,45 @@ test.use({ mobile: devices.pixel7 }); // type-checked; auto-boots the AVD if it 
   `test.use()` block; other tests are unaffected.
 - Env alternatives: `MOBILE_PLATFORM` / `MOBILE_DEVICE` apply when a spec doesn't set the `mobile` option.
 
+## Testing your own app
+
+The examples use built-in apps (Settings) so they run with zero install. To test a **real build**,
+point the framework at your artifact — it's installed on the device once before the flow runs, then
+the flow `launchApp`s it by `appId`:
+
+```json
+// env/environments.json → common (or a specific env)
+"MOBILE_APP_ANDROID": "builds/app-debug.apk",           // local path or https URL
+"MOBILE_APP_IOS": "builds/App.app"                        // .app, or an https URL to a .zip of it
+```
+
+```yaml
+# your flow references the app by id
+appId: com.example.app
+---
+- launchApp: { clearState: true } # clearState resets app data → per-test isolation
+- tapOn: 'Sign in'
+```
+
+Or per test: `test.use({ mobile: { ...devices.pixel9, app: 'builds/app-debug.apk' } })`. The app is
+installed **once per run** (serial worker), not before every test. Sources: a **local path** or an
+**https URL** (Android APK, or an iOS `.zip` containing the `.app` — handy for CI artifacts).
+
+**Scope:** APK on the Android emulator and `.app` on the iOS simulator are supported today, plus
+**real Android devices** (see below). Android **AAB** (needs `bundletool`) and iOS **`.ipa` / real
+devices** are not yet wired — see [Not yet (V2)](#not-yet-v2).
+
+### Real devices
+
+- **Android (supported):** plug in a device with USB debugging on, confirm `adb devices` lists it,
+  then target it by its serial: `test.use({ mobile: { platform: 'android', device: 'RZ8N...' } })`
+  (or `MOBILE_DEVICE=RZ8N...`). A real device is used as-is — never auto-booted or shut down — and
+  `adb install -r` puts your APK on it just like the emulator.
+- **iOS (not yet):** Maestro supports physical iPhones via its WebDriverAgent driver + a `--team-id`,
+  but it needs a signed `.ipa`, install via `xcrun devicectl`, and real-device discovery (`devicectl`,
+  not `simctl`) — none of which is wired here yet. It's also currently blocked upstream on Xcode 26.4+
+  ([mobile-dev-inc/maestro#3218](https://github.com/mobile-dev-inc/maestro/issues/3218)). Deferred.
+
 ## Authoring a test
 
 Two pieces: a **Maestro flow** (the mobile steps, in YAML) and a **spec** that runs it (Playwright).
@@ -172,5 +214,7 @@ per-step Maestro timeline is not surfaced in Playwright's trace (Maestro execute
 
 ## Not yet (V2)
 
-Device pools + parallel workers, app install, retries with device reset, auto-shutdown of
-framework-booted devices, and JUnit-parsed per-step reporting are intentionally out of the MVP.
+Out of scope for now: device pools + parallel workers, retries with device reset, JUnit-parsed
+per-step reporting, and a fluent TS builder that generates flows (Playwright-style authoring without
+hand-written YAML). App install covers APK/`.app`; **AAB** (needs `bundletool`) and **iOS `.ipa` /
+real devices** (signing + `devicectl`, and blocked upstream on Xcode 26.4+) are deferred.

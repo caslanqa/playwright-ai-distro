@@ -231,7 +231,8 @@ test('available pets are all "available"', async ({ petService }) => {
 
 Mobile tests are [Maestro](https://maestro.mobile.dev) YAML flows orchestrated by Playwright (Maestro
 is the mobile engine, invoked via its CLI — no npm dependency). **Opt-in**: scaffold with `--mobile`.
-Tests read like the UI/API tests — see [docs/MOBILE_TESTING.md](docs/MOBILE_TESTING.md).
+Tests read like the UI/API tests — see [docs/MOBILE_TESTING.md](docs/MOBILE_TESTING.md), plus the
+[Mobile Cheat Sheet](docs/MOBILE_CHEATSHEET.md) for device/app-id lookups and CLI commands.
 
 ```typescript
 import { test } from '@fixtures/mobileFixtures';
@@ -248,7 +249,17 @@ test.describe('Login — Android', () => {
 
 Runs serially in the browser-free `mobile` project: `npm run test:mobile`. A catalogued `device`
 auto-boots (Android AVD / iOS simulator); with none available the tests **skip** (don't fail). No
-device yet? `npm run mobile:create-device` builds one from your installed SDK/Xcode.
+device yet? `npm run mobile:create-device` builds one from your installed SDK/Xcode. Test your own
+build by pointing `MOBILE_APP_ANDROID` / `MOBILE_APP_IOS` (path or URL) at an APK / `.app` — it's
+installed before the flow runs. Devices the framework auto-boots are shut down after the run
+(`MOBILE_KEEP_DEVICES=1` to keep them).
+
+**Real devices:** Android is supported — plug in a device (USB debugging on) and target it by serial
+(`device: 'RZ8N...'`); `adb install` handles your APK. **iOS real devices are not yet supported**:
+Maestro drives them via WebDriverAgent + `--team-id`, but that needs a signed `.ipa`, `xcrun
+devicectl` install, and physical-device discovery — and is currently blocked upstream on Xcode 26.4+
+([maestro#3218](https://github.com/mobile-dev-inc/maestro/issues/3218)). iOS testing today is
+simulator-only; real-device support is planned once the upstream build is fixed.
 
 ## 📁 Project Structure
 
@@ -265,7 +276,7 @@ playwright-ai-distro/
 │   ├── loadEnv.ts
 │   ├── envUtils.ts
 │   └── aiJudge.config.ts     # tiers, thresholds, routing preferences
-├── docs/                     # AI_JUDGE.md · API_TESTING.md · MOBILE_TESTING.md
+├── docs/                     # AI_JUDGE.md · API_TESTING.md · MOBILE_TESTING.md · MOBILE_CHEATSHEET.md
 ├── env/                      # environments.json (BASE_URL, API_BASE_URL)
 ├── fixtures/                 # Playwright fixtures
 │   ├── globalFixtures.ts     #   test/expect + `session` storageState-key option
@@ -422,6 +433,7 @@ workflow_dispatch:
 - [AI Judge Guide](docs/AI_JUDGE.md) - Detailed AI Judge documentation
 - [API Testing Guide](docs/API_TESTING.md) - Layered API client/service/test structure
 - [Mobile Testing Guide](docs/MOBILE_TESTING.md) - Maestro flows orchestrated by Playwright
+- [Mobile Cheat Sheet](docs/MOBILE_CHEATSHEET.md) - device/app IDs, boot & install commands, Maestro CLI
 - [Playwright Docs](https://playwright.dev/docs/intro) - Official Playwright docs
 
 ## 📄 License

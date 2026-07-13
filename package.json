@@ -41,6 +41,7 @@
     "docs/AI_JUDGE.md",
     "docs/API_TESTING.md",
     "docs/MOBILE_TESTING.md",
+    "docs/MOBILE_CHEATSHEET.md",
     "env/environments.example.json",
     "fixtures/",
     "mobile/",

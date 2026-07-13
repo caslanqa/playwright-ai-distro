@@ -87,7 +87,11 @@ export class DeviceManager {
       : this.findBootedIos(deviceName);
   }
 
-  /** Parse `adb devices` for a serial in state `device` (matching the AVD name if requested). */
+  /**
+   * Parse `adb devices` for a serial in state `device`. When `deviceName` is given, match it against
+   * either the raw serial (a plugged-in REAL device, e.g. `RZ8N...`) or the AVD name behind an
+   * emulator serial — so a real device can be targeted with `device: '<serial>'` (no auto-boot).
+   */
   private async findBootedAndroid(deviceName?: string): Promise<DiscoveredDevice | null> {
     const out = await capture(adbPath(), ['devices']);
     if (out === null) {
@@ -99,7 +103,7 @@ export class DeviceManager {
         continue;
       }
       if (deviceName) {
-        if ((await avdNameForSerial(id)) === deviceName) {
+        if (id === deviceName || (await avdNameForSerial(id)) === deviceName) {
           return { id, platform: 'android', name: deviceName };
         }
         continue;
