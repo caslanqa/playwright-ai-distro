@@ -10,6 +10,7 @@ import {
   shutdownEmulator,
 } from './android';
 import { bootIosSim, openSimulatorApp, quitSimulatorApp, resolveSimUdid } from './ios';
+import { recordBootedDevice } from './session';
 import type { DiscoveredDevice, MobilePlatform } from './types';
 
 const execFileAsync = promisify(execFile);
@@ -68,7 +69,12 @@ export class DeviceManager {
       await bootIosSim(deviceName);
       await (headless ? quitSimulatorApp() : openSimulatorApp());
     }
-    return this.findBooted(platform, deviceName);
+    // We booted it (vs reused) → record it so globalTeardown can shut it down at the end of the run.
+    const booted = await this.findBooted(platform, deviceName);
+    if (booted) {
+      recordBootedDevice(booted);
+    }
+    return booted;
   }
 
   /** First booted device for the platform, matching `deviceName` when provided. */

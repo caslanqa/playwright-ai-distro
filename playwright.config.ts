@@ -71,9 +71,10 @@ export default defineConfig({
     // Output directory for test artifacts
     outputDir: 'test-results/',
 
-    // Global setup/teardown (optional)
-    // globalSetup: require.resolve('./tests/global-setup.ts'),
-    // globalTeardown: require.resolve('./tests/global-teardown.ts'),
+    // Mobile teardown: shut down the devices the framework auto-booted this run so they don't linger
+    // (mobile/teardown.ts). Wired only for mobile runs; set MOBILE_KEEP_DEVICES=1 to keep them for
+    // faster iterative reruns. Devices you booted yourself are never touched.
+    globalTeardown: mobileEnabled ? './mobile/teardown.ts' : undefined,
 
     // Shared settings for all projects
     use: {

@@ -76,6 +76,10 @@ npm run test:mobile
 
 `test:mobile` runs `MOBILE=1 playwright test --project=mobile --workers=1` — serial, single device.
 
+After the run, devices the framework **auto-booted are shut down** (via `globalTeardown`) so emulators
+and simulators don't linger. A device you booted yourself is never touched. Keep the auto-booted ones
+for faster iterative reruns with `MOBILE_KEEP_DEVICES=1` — they're reused on the next run.
+
 ### Choosing the device
 
 Devices live in a typed **catalog** (`mobile/devices.ts`) — the single place device names live —
