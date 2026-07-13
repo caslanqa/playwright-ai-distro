@@ -85,7 +85,8 @@ const GHA_WORKFLOW = '.github/workflows/ci.yml';
 const MOBILE_README_SECTION = `
 ### Mobile test (Maestro)
 
-Mobile tests read like the UI/API tests: pick a device with \`test.use({ mobile: { platform, device } })\`
+Requires the [Maestro](https://maestro.mobile.dev) CLI + Java 17+ and a device (Android emulator or
+iOS simulator). Mobile tests read like the UI/API tests: pick a device with \`test.use({ mobile: { platform, device } })\`
 and run a Maestro YAML flow with \`maestro.run('…')\` (see \`tests/mobile/*.mobile.ts\`). Serial, and the
 named device is auto-booted if it isn't running:
 
@@ -402,7 +403,10 @@ ${colors.cyan}╔═════════════════════
   // README.md — rendered from templates/README.md with the project name substituted.
   const readmeTemplate = path.join(packageRoot, 'templates', 'README.md');
   if (fs.existsSync(readmeTemplate)) {
-    const readme = fs.readFileSync(readmeTemplate, 'utf8').replace(/\{\{PROJECT_NAME\}\}/g, pkgName);
+    const readme = fs
+      .readFileSync(readmeTemplate, 'utf8')
+      .replace(/\{\{PROJECT_NAME\}\}/g, pkgName)
+      .replace(/\{\{MOBILE_SECTION\}\}/g, includeMobile ? MOBILE_README_SECTION : '');
     fs.writeFileSync(path.join(targetDir, 'README.md'), readme);
     log.success('Created README.md');
   } else {
