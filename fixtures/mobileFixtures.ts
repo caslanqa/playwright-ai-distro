@@ -4,6 +4,7 @@ import path from 'path';
 import { test as base, expect } from '@playwright/test';
 
 import { loadEnv } from '@config/loadEnv';
+import { ensureAppInstalled } from '@mobile/core/appInstaller';
 import { DeviceManager } from '@mobile/core/DeviceManager';
 import { MaestroRunner } from '@mobile/core/MaestroRunner';
 import type { DiscoveredDevice, MobilePlatform } from '@mobile/core/types';
@@ -24,8 +25,12 @@ export interface MobileOptions {
    *   show the emulator window / Simulator app. Precedence: this per-test value, then the central
    *   `MOBILE_HEADLESS` default (env / env/environments.json), then `true`. It's scoped to this
    *   `test.use()` block, and always takes effect — a reused device is switched to the requested mode.
+   * - `app` (local path or http(s) URL to an APK / iOS `.app`/`.zip`) is installed on the device once
+   *   before the flow runs; the flow then `launchApp`s it by `appId`. Falls back to `MOBILE_APP_ANDROID`
+   *   / `MOBILE_APP_IOS` (env). Omit for built-in apps (e.g. the Settings example) that need no install.
    */
-  mobile: { platform?: MobilePlatform; device?: string; headless?: boolean } | undefined;
+  mobile:
+    { platform?: MobilePlatform; device?: string; headless?: boolean; app?: string } | undefined;
 }
 
 /** The runtime facade a mobile test uses. */
@@ -100,6 +105,14 @@ export const test = base.extend<MobileOptions & MobileFixtures>({
           'create one with `npm run mobile:create-device`, or boot a device manually. See docs/MOBILE_TESTING.md'
       );
       return;
+    }
+
+    // Install the app under test (if configured) once before the flow runs; built-in apps need none.
+    const appSource =
+      mobile?.app ??
+      (platform === 'android' ? process.env.MOBILE_APP_ANDROID : process.env.MOBILE_APP_IOS);
+    if (appSource) {
+      await ensureAppInstalled(device, appSource);
     }
 
     const runner = new MaestroRunner();

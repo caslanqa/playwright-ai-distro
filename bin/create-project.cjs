@@ -415,13 +415,10 @@ ${colors.cyan}╔═════════════════════
       fs.cpSync(mobileSrc, path.join(targetDir, 'mobile'), { recursive: true });
       copiedCount += countFiles(mobileSrc);
     }
-    if (
-      copyFile(
-        path.join(packageRoot, 'docs/MOBILE_TESTING.md'),
-        path.join(targetDir, 'docs/MOBILE_TESTING.md')
-      )
-    ) {
-      copiedCount++;
+    for (const doc of ['docs/MOBILE_TESTING.md', 'docs/MOBILE_CHEATSHEET.md']) {
+      if (copyFile(path.join(packageRoot, doc), path.join(targetDir, doc))) {
+        copiedCount++;
+      }
     }
   } else {
     fs.rmSync(path.join(targetDir, 'tests', 'mobile'), { recursive: true, force: true });

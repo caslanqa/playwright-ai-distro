@@ -69,3 +69,10 @@ export async function quitSimulatorApp(): Promise<void> {
     timeout: 10_000,
   }).catch(() => undefined);
 }
+
+/** Shut down a booted simulator by UDID (used by teardown). */
+export async function shutdownSim(udid: string): Promise<void> {
+  await execFileAsync('xcrun', ['simctl', 'shutdown', udid], { timeout: 30_000 }).catch(
+    () => undefined
+  );
+}
