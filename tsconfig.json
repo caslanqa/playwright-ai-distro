@@ -20,6 +20,7 @@
     "paths": {
       "@api/*": ["api/*"],
       "@mobile/*": ["mobile/*"],
+      "@desktop/*": ["desktop/*"],
       "@utils/*": ["utils/*"],
       "@pages/*": ["pages/*"],
       "@fixtures/*": ["fixtures/*"],

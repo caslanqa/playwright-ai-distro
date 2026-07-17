@@ -20,6 +20,8 @@
  *   --no-install    Skip "npm install" in the new project
  *   --no-browsers   Skip "npx playwright install" (browser binaries)
  *   --no-gha        Skip the GitHub Actions workflow
+ *   --mobile        Include mobile testing (Maestro)
+ *   --desktop       Include desktop testing (Electron)
  *   -y, --yes       Accept all defaults without prompting
  *   -h, --help      Show usage
  */
@@ -101,57 +103,90 @@ picker). Android also needs the command-line tools (macOS/Windows/Linux, GUI or 
 [docs/MOBILE_TESTING.md](docs/MOBILE_TESTING.md#installing-the-android-command-line-tools).
 `;
 
+// Electron version pinned into the generated project's devDependencies when desktop testing is opted
+// in (kept out of this repo's own devDeps so it doesn't download for non-desktop scaffolds).
+const DESKTOP_ELECTRON_VERSION = '^43.0.0';
+
+// Injected into the generated README (templates/README.md {{DESKTOP_SECTION}}) only when desktop is
+// opted in; replaced with '' otherwise so opted-out projects don't document a feature they lack.
+const DESKTOP_README_SECTION = `
+### Desktop test (Electron)
+
+Requires the \`electron\` devDependency (the scaffolder adds it when you opt in). Desktop tests read
+like the UI tests — the Electron window is a Playwright \`Page\`, so locators, \`expect\`, POMs and
+\`expectAi\` all work on it:
+
+\`\`\`bash
+npm run test:desktop   # DESKTOP=1 playwright test --project=desktop
+\`\`\`
+
+Point \`desktop/apps.ts\` at your app (an Electron \`main\` script or a packaged \`executablePath\`), or
+keep the bundled example. On headless Linux/CI wrap it: \`xvfb-run -a npm run test:desktop\`. See
+[docs/DESKTOP_TESTING.md](docs/DESKTOP_TESTING.md).
+`;
+
 // package.json for the generated project. devDependencies are read from THIS
 // package's own package.json so the copied configs (eslint/prettier/playwright)
 // always get matching, complete dependencies — single source of truth, no drift.
 // `meta` (version/description/author/license) comes from the interactive `npm init`-style prompts.
-const createPackageJson = (projectName, devDependencies, includeMobile, meta = {}) => ({
-  name: projectName,
-  version: meta.version || '1.0.0',
-  description: meta.description || 'Playwright test automation with AI Judge capabilities',
-  // The copied configs (eslint.config.js, playwright.config.ts) use ESM syntax,
-  // so the project must be an ES module package.
-  type: 'module',
-  // Kept in sync with this repo's own package.json scripts (the template). Mobile scripts are the
-  // only conditional ones — mobile testing is opt-in in the scaffolder.
-  scripts: {
-    clearReports: 'rm -rf playwright-report test-results allure-report allure-results',
-    test: 'playwright test',
-    'test:headed': 'playwright test --headed',
-    'test:debug': 'playwright test --debug',
-    'test:ui': 'playwright test --ui',
-    'test:parallel': 'playwright test --workers=4',
-    'test:serial': 'playwright test --workers=1',
-    'test:api': 'playwright test --project=api',
-    ...(includeMobile
-      ? {
-          'test:mobile': 'MOBILE=1 playwright test --project=mobile --workers=3',
-          'mobile:create-device': 'node mobile/create-device.mjs',
-        }
-      : {}),
-    'test:tag': 'playwright test --workers=1 --project chromium --retries=0 --grep @wip',
-    'report:playwright': 'playwright show-report',
-    'report:allure':
-      'allure generate allure-results --output allure-report && allure serve allure-results',
-    codegen: 'playwright codegen',
-    lint: 'eslint .',
-    'lint:fix': 'eslint . --fix',
-    format: 'prettier --write "**/*.{ts,js,json,md}"',
-    'format:check': 'prettier --check "**/*.{ts,js,json,md}"',
-    'type-check': 'tsc --noEmit',
-    commit: 'cz',
-    prepare: 'husky',
-  },
-  ...(meta.keywords && meta.keywords.length ? { keywords: meta.keywords } : {}),
-  ...(meta.author ? { author: meta.author } : {}),
-  license: meta.license || 'ISC',
-  ...(meta.repository ? { repository: { type: 'git', url: meta.repository } } : {}),
-  devDependencies,
-  'lint-staged': {
-    '*.{ts,tsx,js}': ['eslint --fix', 'prettier --write'],
-    '*.{json,md}': ['prettier --write'],
-  },
-});
+const createPackageJson = (projectName, devDependencies, includeMobile, includeDesktop, meta = {}) => {
+  // Desktop testing needs the `electron` binary; inject + re-sort so it lands alphabetically.
+  const desktopDeps = includeDesktop ? { electron: DESKTOP_ELECTRON_VERSION } : {};
+  const mergedDevDependencies = Object.fromEntries(
+    Object.entries({ ...devDependencies, ...desktopDeps }).sort(([a], [b]) => a.localeCompare(b))
+  );
+
+  return {
+    name: projectName,
+    version: meta.version || '1.0.0',
+    description: meta.description || 'Playwright test automation with AI Judge capabilities',
+    // The copied configs (eslint.config.js, playwright.config.ts) use ESM syntax,
+    // so the project must be an ES module package.
+    type: 'module',
+    // Kept in sync with this repo's own package.json scripts (the template). The mobile and desktop
+    // scripts are the only conditional ones — both are opt-in in the scaffolder.
+    scripts: {
+      clearReports: 'rm -rf playwright-report test-results allure-report allure-results',
+      test: 'playwright test',
+      'test:headed': 'playwright test --headed',
+      'test:debug': 'playwright test --debug',
+      'test:ui': 'playwright test --ui',
+      'test:parallel': 'playwright test --workers=4',
+      'test:serial': 'playwright test --workers=1',
+      'test:api': 'playwright test --project=api',
+      ...(includeMobile
+        ? {
+            'test:mobile': 'MOBILE=1 playwright test --project=mobile --workers=3',
+            'mobile:create-device': 'node mobile/create-device.mjs',
+          }
+        : {}),
+      ...(includeDesktop
+        ? { 'test:desktop': 'DESKTOP=1 playwright test --project=desktop' }
+        : {}),
+      'test:tag': 'playwright test --workers=1 --project chromium --retries=0 --grep @wip',
+      'report:playwright': 'playwright show-report',
+      'report:allure':
+        'allure generate allure-results --output allure-report && allure serve allure-results',
+      codegen: 'playwright codegen',
+      lint: 'eslint .',
+      'lint:fix': 'eslint . --fix',
+      format: 'prettier --write "**/*.{ts,js,json,md}"',
+      'format:check': 'prettier --check "**/*.{ts,js,json,md}"',
+      'type-check': 'tsc --noEmit',
+      commit: 'cz',
+      prepare: 'husky',
+    },
+    ...(meta.keywords && meta.keywords.length ? { keywords: meta.keywords } : {}),
+    ...(meta.author ? { author: meta.author } : {}),
+    license: meta.license || 'ISC',
+    ...(meta.repository ? { repository: { type: 'git', url: meta.repository } } : {}),
+    devDependencies: mergedDevDependencies,
+    'lint-staged': {
+      '*.{ts,tsx,js}': ['eslint --fix', 'prettier --write'],
+      '*.{json,md}': ['prettier --write'],
+    },
+  };
+};
 
 // Get the installed package root. When run via npx/npm-init the bin lives at
 // <packageRoot>/bin/create-project.cjs, so the root is one level up.
@@ -428,6 +463,7 @@ ${colors.cyan}Options:${colors.reset}
   --no-browsers    Skip installing Playwright browser binaries
   --no-gha         Skip the GitHub Actions workflow
   --mobile         Include mobile testing (Maestro); when installing, checks/installs adb + Maestro CLI
+  --desktop        Include desktop testing (Electron); adds the electron devDependency
   -y, --yes        Accept all defaults without prompting (no interactive menu)
   -h, --help       Show this help
 `);
@@ -446,6 +482,7 @@ async function main() {
   const flagNoBrowsers = argv.includes('--no-browsers');
   const flagNoGha = argv.includes('--no-gha');
   const flagMobile = argv.includes('--mobile');
+  const flagDesktop = argv.includes('--desktop');
   const flagYes = argv.includes('--yes') || argv.includes('-y');
   // First non-flag argument is the project directory.
   const positional = argv.find(a => !a.startsWith('-'));
@@ -463,6 +500,7 @@ ${colors.cyan}╔═════════════════════
   let projectName = positional;
   let includeGha = !flagNoGha;
   let includeMobile = flagMobile;
+  let includeDesktop = flagDesktop;
   let doInstall = !flagNoInstall;
   let doBrowsers = !flagNoBrowsers;
   // package.json metadata — the `npm init`-style questions. Defaults used in --yes / non-TTY mode.
@@ -496,6 +534,9 @@ ${colors.cyan}╔═════════════════════
       }
       if (!flagMobile) {
         includeMobile = await prompt.confirm('Add mobile testing (Maestro flows)?', false);
+      }
+      if (!flagDesktop) {
+        includeDesktop = await prompt.confirm('Add desktop testing (Electron)?', false);
       }
       if (!flagNoInstall) {
         doInstall = await prompt.confirm('Install npm dependencies now?', true);
@@ -586,6 +627,22 @@ ${colors.cyan}╔═════════════════════
     fs.rmSync(path.join(targetDir, 'tests', 'mobile'), { recursive: true, force: true });
   }
 
+  // Desktop testing (Electron) — opt-in, same pattern as mobile. `tests/desktop` shipped as part of
+  // `tests/` above; keep it only when opted in and add the `desktop/` engine + its doc. Otherwise
+  // strip `tests/desktop` so the config's existsSync guard leaves the `desktop` project unregistered.
+  if (includeDesktop) {
+    const desktopSrc = path.join(packageRoot, 'desktop');
+    if (fs.existsSync(desktopSrc)) {
+      fs.cpSync(desktopSrc, path.join(targetDir, 'desktop'), { recursive: true });
+      copiedCount += countFiles(desktopSrc);
+    }
+    if (copyFile(path.join(packageRoot, 'docs/DESKTOP_TESTING.md'), path.join(targetDir, 'docs/DESKTOP_TESTING.md'))) {
+      copiedCount++;
+    }
+  } else {
+    fs.rmSync(path.join(targetDir, 'tests', 'desktop'), { recursive: true, force: true });
+  }
+
   log.success(`Copied ${copiedCount} files`);
 
   // .gitignore is shipped as templates/gitignore because npm renames a literal
@@ -601,7 +658,7 @@ ${colors.cyan}╔═════════════════════
   // package.json (devDependencies derived from this package — single source of truth)
   const devDependencies = readTemplateDevDependencies(packageRoot);
   const pkgName = isCurrentDir ? path.basename(targetDir) : projectName;
-  const pkgJson = createPackageJson(pkgName, devDependencies, includeMobile, meta);
+  const pkgJson = createPackageJson(pkgName, devDependencies, includeMobile, includeDesktop, meta);
   fs.writeFileSync(path.join(targetDir, 'package.json'), JSON.stringify(pkgJson, null, 2) + '\n');
   log.success('Created package.json');
 
@@ -611,7 +668,8 @@ ${colors.cyan}╔═════════════════════
     const readme = fs
       .readFileSync(readmeTemplate, 'utf8')
       .replace(/\{\{PROJECT_NAME\}\}/g, pkgName)
-      .replace(/\{\{MOBILE_SECTION\}\}/g, includeMobile ? MOBILE_README_SECTION : '');
+      .replace(/\{\{MOBILE_SECTION\}\}/g, includeMobile ? MOBILE_README_SECTION : '')
+      .replace(/\{\{DESKTOP_SECTION\}\}/g, includeDesktop ? DESKTOP_README_SECTION : '');
     fs.writeFileSync(path.join(targetDir, 'README.md'), readme);
     log.success('Created README.md');
   } else {
@@ -726,6 +784,15 @@ ${colors.cyan}For Mobile testing (Maestro):${colors.reset}
   4. ${colors.yellow}npm run test:mobile${colors.reset}
 `
     : '';
+  const desktopHelp = includeDesktop
+    ? `
+${colors.cyan}For Desktop testing (Electron):${colors.reset}
+
+  1. electron was added to devDependencies${installed ? ' and installed' : ' — run npm install'}
+  2. Point ${colors.yellow}desktop/apps.ts${colors.reset} at your app, or keep the bundled example
+  3. ${colors.yellow}npm run test:desktop${colors.reset}   (headless Linux/CI: ${colors.yellow}xvfb-run -a npm run test:desktop${colors.reset})
+`
+    : '';
 
   console.log(`
 ${colors.green}✨ Project created successfully!${colors.reset}
@@ -737,9 +804,9 @@ ${colors.cyan}For AI Judge:${colors.reset}
   1. Install Ollama: ${colors.blue}https://ollama.com${colors.reset}
   2. ${colors.yellow}ollama serve${colors.reset}  (then pull a model, e.g. ${colors.yellow}ollama pull qwen3.5${colors.reset})
   3. ${colors.yellow}npx playwright test tests/example/aiJudge.spec.ts${colors.reset}
-${mobileHelp}
+${mobileHelp}${desktopHelp}
 ${colors.cyan}Documentation:${colors.reset}
-  - AI Judge Guide: ${colors.blue}docs/AI_JUDGE.md${colors.reset}${includeMobile ? `\n  - Mobile Testing: ${colors.blue}docs/MOBILE_TESTING.md${colors.reset}` : ''}
+  - AI Judge Guide: ${colors.blue}docs/AI_JUDGE.md${colors.reset}${includeMobile ? `\n  - Mobile Testing: ${colors.blue}docs/MOBILE_TESTING.md${colors.reset}` : ''}${includeDesktop ? `\n  - Desktop Testing: ${colors.blue}docs/DESKTOP_TESTING.md${colors.reset}` : ''}
   - Playwright Docs: ${colors.blue}https://playwright.dev${colors.reset}
 
 Happy testing! 🎭
