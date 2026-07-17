@@ -12,6 +12,11 @@ loadEnv();
 // bare `npm test` web+api only — mobile needs a booted device and runs serially on a single device.
 const mobileEnabled = fs.existsSync('tests/mobile') && process.env.MOBILE === '1';
 
+// The Electron-driven `desktop` project is registered only when desktop testing was scaffolded
+// (tests/desktop exists) AND explicitly enabled (DESKTOP=1, set by `npm run test:desktop`). Same
+// opt-in gate as mobile, so a bare `npm test` stays web+api only. Requires `electron` installed.
+const desktopEnabled = fs.existsSync('tests/desktop') && process.env.DESKTOP === '1';
+
 /**
  * Playwright Test Configuration
  *
@@ -149,6 +154,25 @@ export default defineConfig({
             // when MOBILE_SCREENSHOT=on). `trace` stays on (inherited, retain-on-failure): it
             // now carries those step-level captures, so the trace viewer is a real timeline.
             use: { video: 'off' as const, screenshot: 'off' as const },
+          },
+        ]
+      : []),
+
+    // ============================================
+    // DESKTOP TESTS - Electron apps via Playwright's native `_electron` (see desktop/ +
+    // fixtures/desktopFixtures.ts). Opt-in and gated: registered only when scaffolded (tests/desktop)
+    // and DESKTOP=1 (set by `npm run test:desktop`). No `use` override — an Electron window is a real
+    // Chromium page, so the inherited trace/screenshot/video are genuine; the fixture also attaches
+    // its own trace + failure screenshot. No device to discover, so tests run in parallel.
+    // ============================================
+    ...(desktopEnabled
+      ? [
+          {
+            name: 'desktop',
+            testDir: './tests/desktop',
+            testMatch: /.*\.desktop\.ts$/,
+            // Generous per-test timeout: the first Electron launch is a little slower than a browser.
+            timeout: 2 * 60 * 1000,
           },
         ]
       : []),
