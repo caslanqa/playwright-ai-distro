@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.0.0] - 2026-07-17
+
+- Version bump (major)
+
+
 ## [3.6.0] - 2026-07-17
 
 - Version bump (minor)
