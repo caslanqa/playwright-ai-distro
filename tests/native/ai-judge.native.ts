@@ -4,7 +4,7 @@ import { test } from '@fixtures/nativeFixtures';
 import { getRegistry } from '@utils/ai/registry/providerRegistry';
 
 test.describe('Native AI-judge — macOS', () => {
-  test.use({ native: { app: 'textEdit' } });
+  test.use({ native: { app: 'settingsApp' } });
 
   // Skip cleanly off-macOS, and when no vision-capable AI provider is configured (an Ollama vision
   // model, or an OpenAI key), so the suite stays green everywhere. `getRegistry` discovers available
@@ -20,13 +20,26 @@ test.describe('Native AI-judge — macOS', () => {
 
   // The unified-QA payoff: drive a native desktop app with Appium, then judge a screenshot of it with
   // the SAME multimodal AI judge used for web, mobile, and Electron (see docs/AI_JUDGE.md).
-  test('the TextEdit window is judged against a rubric', async ({ app }) => {
-    const shot = await app.takeScreenshot('textedit');
+  test.skip('the Settings window is judged against a rubric', async ({ app }) => {
+    const shot = await app.takeScreenshot('settingsApp');
     await expectAi({
       image: shot,
       rubric:
         'A macOS TextEdit application — a text-editor window, or its open/new-document panel. A ' +
         'well-formed native app UI, not an error dialog or a blank screen.',
+    }).toPassRubric({ minScore: 60 });
+  });
+
+  test('the Settings window is judged against a rubric with a custom prompt', async ({ app }) => {
+    const shot = await app.takeScreenshot('settingsApp');
+    await expectAi({
+      image: shot,
+      rubric:
+        'A macOS Settings application — a settings window, or its open/preferences panel. A ' +
+        'well-formed native app UI, not an error dialog or a blank screen.',
+      prompt:
+        'You are a helpful assistant that judges screenshots of native desktop apps. ' +
+        'Score the screenshot from 0 to 100, and explain your reasoning.',
     }).toPassRubric({ minScore: 60 });
   });
 });

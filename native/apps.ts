@@ -30,5 +30,6 @@ export interface NativeAppSpec {
 export const apps = {
   // Built-in OS apps every machine has, so the layer runs out-of-box on each platform's example test.
   textEdit: { platform: 'mac', bundleId: 'com.apple.TextEdit' },
+  settingsApp: { platform: 'mac', bundleId: 'com.apple.systempreferences' },
   notepad: { platform: 'windows', appPath: 'C:/Windows/System32/notepad.exe' },
 } as const satisfies Record<string, NativeAppSpec>;

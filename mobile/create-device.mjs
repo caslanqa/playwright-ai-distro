@@ -289,7 +289,10 @@ async function createAndroid(opts) {
 
   if (!spec.installed) {
     log.warn(`System image ${spec.image} not installed — downloading (~1 GB)...`);
-    execSync(`yes | "${sdkmanager}" "${spec.image}"`, { stdio: 'inherit' });
+    execSync(`"${sdkmanager}" "${spec.image}"`, {
+      input: 'y\n'.repeat(50),
+      stdio: ['pipe', 'inherit', 'inherit'],
+    });
   }
 
   log.info(`Creating AVD "${name}" (${profile}, ${spec.image})...`);
