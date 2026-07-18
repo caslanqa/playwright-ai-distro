@@ -36,7 +36,7 @@ tests/native/*.native.ts        Playwright specs: test.use({ native }) + the `ap
 fixtures/nativeFixtures.ts       `native` option + `app` fixture (server → launch → teardown)
         │
 native/core/NativeSession.ts     Layer 1: webdriverio remote() session, screenshot/source, evidence
-native/core/appiumServer.ts      ensures a reachable Appium server (auto-starts a local one)
+native/core/appiumServer.ts      ensures a reachable Appium server (auto-starts a local one) + driver
 native/apps.ts                   the named app catalog (mirrors desktop/apps.ts)
 ```
 
@@ -59,12 +59,19 @@ Node-based, so — unlike the mobile engine — **no Java is required**.
 **2. `appium` + `webdriverio`** — devDependencies. The scaffolder adds them when you opt into native
 testing (`--native`); otherwise `npm i -D appium webdriverio`.
 
-**3. The Appium platform driver** — installed into Appium once (the scaffolder does this on opt-in):
+**3. The Appium platform driver** — you normally don't install this yourself. The scaffolder installs
+it on opt-in, and if it's ever missing the **fixture auto-installs it on the first native run** (it
+checks `appium driver list --installed` and installs the matching driver for your OS). To do it
+manually anyway:
 
 ```bash
 npx appium driver install mac2       # macOS
 npx appium driver install windows    # Windows
 ```
+
+> The first run that has to install the driver is slower (a one-time npm download, cached afterwards).
+> Auto-install only covers the driver matching your OS — `mac2` on macOS, `windows` on Windows; if it
+> can't be installed the test skips with a clear message rather than failing.
 
 **4. Per-OS system prerequisites:**
 

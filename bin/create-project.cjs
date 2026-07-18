@@ -148,8 +148,8 @@ const NATIVE_README_SECTION = `
 ### Native desktop test (Appium)
 
 For **non-Electron** native OS apps (macOS AppKit, Windows Win32/WPF/WinUI). Requires \`appium\` +
-\`webdriverio\` (the scaffolder adds them when you opt in) and a platform driver
-(\`npx appium driver install mac2\` on macOS, \`windows\` on Windows). Native apps are driven over
+\`webdriverio\` (the scaffolder adds them when you opt in); the platform driver (\`mac2\`/\`windows\`) is
+auto-installed on the first native run (or \`npx appium driver install mac2\`). Native apps are driven over
 WebDriver — the window is NOT a Playwright \`Page\`, so tests use the imperative \`app\` fixture plus
 \`expectAi\` on a screenshot:
 

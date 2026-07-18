@@ -69,6 +69,22 @@ function toWdioSelector(selector: NativeSelector): string {
 }
 
 /**
+ * Resolve just the target platform (`mac` | `windows`) from a config, using the same precedence as
+ * {@link NativeSession.resolve}: explicit `platform` → a catalogued app's platform → `NATIVE_PLATFORM`
+ * → `mac`. Exported so the fixture can ensure the matching Appium driver before opening a session,
+ * without duplicating the precedence rules.
+ */
+export function resolveNativePlatform(config: NativeAppConfig | undefined): NativePlatform {
+  const spec = config?.app ? apps[config.app as keyof typeof apps] : undefined;
+  return (
+    config?.platform ??
+    spec?.platform ??
+    (process.env.NATIVE_PLATFORM as NativePlatform | undefined) ??
+    'mac'
+  );
+}
+
+/**
  * Layer-1 native-desktop adapter: opens an Appium (WebDriver) session against a running Appium server
  * and drives a native OS app (macOS via the `mac2` driver, Windows via the `windows` driver). Unlike
  * the Electron engine the window is NOT a Playwright `Page`, so assertions use these imperative methods
@@ -110,11 +126,7 @@ export class NativeSession {
         `[native] unknown app '${config.app}' — add it to native/apps.ts (known: ${Object.keys(apps).join(', ')})`
       );
     }
-    const platform =
-      config?.platform ??
-      spec?.platform ??
-      (process.env.NATIVE_PLATFORM as NativePlatform | undefined) ??
-      'mac';
+    const platform = resolveNativePlatform(config);
     const bundleId = config?.bundleId ?? spec?.bundleId;
     const appPath = config?.appPath ?? spec?.appPath;
     const windowsApp = config?.windowsApp ?? spec?.windowsApp ?? appPath;
@@ -187,8 +199,9 @@ export class NativeSession {
       const driver = platform === 'windows' ? 'windows' : 'mac2';
       const detail = (error as Error).message;
       throw nativeError(
-        `[native] failed to start the Appium session — check the driver is installed ` +
-          `(\`appium driver install ${driver}\`) and OS automation permissions are granted.\n${detail}`
+        `[native] failed to start the Appium session — the ${driver} driver is auto-installed, so this ` +
+          `is usually OS permissions: grant Accessibility/automation to your terminal or IDE (macOS), ` +
+          `or install WinAppDriver + enable Developer Mode (Windows).\n${detail}`
       );
     }
   }

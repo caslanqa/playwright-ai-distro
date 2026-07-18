@@ -1,8 +1,12 @@
 import { test as base, expect } from '@playwright/test';
 
 import { loadEnv } from '@config/loadEnv';
-import { ensureAppiumServer } from '@native/core/appiumServer';
-import { NativeSession, type NativeDriver } from '@native/core/NativeSession';
+import { ensureAppiumDriver, ensureAppiumServer } from '@native/core/appiumServer';
+import {
+  NativeSession,
+  resolveNativePlatform,
+  type NativeDriver,
+} from '@native/core/NativeSession';
 import type { NativeAppConfig, NativePlatform, NativeSelector } from '@native/core/types';
 
 // Load the selected environment (NATIVE_APP / NATIVE_PLATFORM / NATIVE_SERVER_URL → process.env)
@@ -89,9 +93,23 @@ export const test = base.extend<NativeOptions & NativeFixtures>({
       if (!baseUrl) {
         testInfo.skip(
           true,
-          '[native] no Appium server available — install it (`npm i -D appium` + ' +
-            '`npx appium driver install mac2`) so it auto-starts, or run `appium` yourself. ' +
-            'See docs/NATIVE_TESTING.md'
+          '[native] no Appium server available — install it (`npm i -D appium`) so it auto-starts, ' +
+            'or run `appium` yourself. See docs/NATIVE_TESTING.md'
+        );
+        return;
+      }
+      // Ensure the platform driver (mac2/windows) is installed — auto-installed on first run; if it
+      // can't be (wrong OS, no appium, install failed) SKIP, mirroring the no-server path above.
+      const config = resolveConfig(native);
+      const platform = resolveNativePlatform(config);
+      if (!(await ensureAppiumDriver(platform))) {
+        const driver = platform === 'windows' ? 'windows' : 'mac2';
+        const os = platform === 'windows' ? 'Windows' : 'macOS';
+        testInfo.skip(
+          true,
+          `[native] the Appium ${driver} driver isn't installed and couldn't be installed ` +
+            `automatically — native ${driver} testing needs ${os}. Install it manually with ` +
+            `\`npx appium driver install ${driver}\`. See docs/NATIVE_TESTING.md`
         );
         return;
       }
@@ -105,7 +123,7 @@ export const test = base.extend<NativeOptions & NativeFixtures>({
         baseUrl
       );
       try {
-        await session.launch(resolveConfig(native));
+        await session.launch(config);
         const raw = session.requireDriver();
         await use({
           platform: session.platformName,

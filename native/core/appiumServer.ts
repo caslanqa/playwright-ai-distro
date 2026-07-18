@@ -1,6 +1,8 @@
-import { spawn, type ChildProcess } from 'child_process';
+import { execFileSync, spawn, type ChildProcess } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+
+import type { NativePlatform } from './types';
 
 const DEFAULT_URL = 'http://127.0.0.1:4723';
 
@@ -96,4 +98,62 @@ export async function ensureAppiumServer(url?: string): Promise<string | null> {
   }
   killSpawned();
   return null;
+}
+
+/** Map the resolved native platform to its Appium driver name. */
+function driverForPlatform(platform: NativePlatform): string {
+  return platform === 'windows' ? 'windows' : 'mac2';
+}
+
+// Drivers already verified/installed in this worker process — the check + install runs at most once
+// per driver per worker (Playwright workers are separate processes, so a module-level Set is per-worker).
+const ensuredDrivers = new Set<string>();
+
+/**
+ * Best-effort ensure the Appium driver for `platform` is installed, using the project-local `appium`
+ * bin, so a native test "just works" without a manual `appium driver install`. Returns:
+ * - `true`  the driver is already installed, or we installed it just now;
+ * - `false` it isn't and we can't install it (appium not installed, wrong OS for the driver, or the
+ *           install failed) — the fixture then SKIPS, mirroring the no-server path.
+ *
+ * The mac2 driver only runs on macOS and the windows driver only on Windows, so we never try to install
+ * the one that can't run here. Cached per worker, so after the first call it costs one quick
+ * `driver list`. The install is a cold npm download — capped at 2 min, then we give up and skip.
+ */
+export async function ensureAppiumDriver(platform: NativePlatform): Promise<boolean> {
+  const driver = driverForPlatform(platform);
+  if (ensuredDrivers.has(driver)) {
+    return true;
+  }
+  const osOk =
+    (driver === 'mac2' && process.platform === 'darwin') ||
+    (driver === 'windows' && process.platform === 'win32');
+  if (!osOk) {
+    return false;
+  }
+  const bin = appiumBin();
+  if (!bin) {
+    return false;
+  }
+  // Already installed? (`appium driver list --installed` prints the installed driver names.)
+  try {
+    const installed = execFileSync(bin, ['driver', 'list', '--installed'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 20_000,
+    });
+    if (installed.includes(driver)) {
+      ensuredDrivers.add(driver);
+      return true;
+    }
+  } catch {
+    // `appium` couldn't list drivers — fall through and try to install it anyway.
+  }
+  try {
+    execFileSync(bin, ['driver', 'install', driver], { stdio: 'ignore', timeout: 120_000 });
+    ensuredDrivers.add(driver);
+    return true;
+  } catch {
+    return false;
+  }
 }
