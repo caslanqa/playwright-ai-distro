@@ -429,6 +429,26 @@ function commandExists(cmd) {
   }
 }
 
+// Detect a CLI flag, tolerating how `npm init`/`npm create` forward args. When run WITHOUT the `--`
+// separator (e.g. `npm init @caslanqa/playwright-ai@latest . --mobile`), `npm exec` PARSES our flags
+// instead of forwarding them, so they never reach argv — npm drops each into an `npm_config_*` env var
+// instead. Empirically (npm 9/10): a boolean `--mobile` becomes `npm_config_mobile="true"`, and a
+// negation `--no-gha` becomes `npm_config_gha=""`. Read both sources so the one-liner works with or
+// without `--`. `name` is the flag minus its `--`/`--no-` prefix, with dashes → underscores.
+function flagPresent(argv, flag) {
+  if (argv.includes(flag)) {
+    return true;
+  }
+  const negated = flag.startsWith('--no-');
+  const name = flag.replace(/^--(no-)?/, '').replace(/-/g, '_');
+  const val = process.env[`npm_config_${name}`];
+  if (val === undefined) {
+    return false;
+  }
+  // A positive flag arrives as "true"; a `--no-x` negation arrives as "" (empty string = false).
+  return negated ? val === '' : val === 'true';
+}
+
 // Best-effort, cross-platform install of the Maestro CLI (the mobile engine). Skips when already
 // installed; warns (never fails) on missing Java or a failed install. macOS/Linux use Maestro's
 // official installer script; Windows needs a POSIX shell (WSL / Git Bash) to run it, else we point
@@ -747,15 +767,16 @@ async function main() {
     return;
   }
 
-  // Explicit flags always win over the interactive menu.
-  const flagNoInstall = argv.includes('--no-install');
-  const flagNoBrowsers = argv.includes('--no-browsers');
-  const flagNoGha = argv.includes('--no-gha');
-  const flagYes = argv.includes('--yes') || argv.includes('-y');
+  // Explicit flags always win over the interactive menu. Read via flagPresent so they're honored even
+  // when `npm init … . --mobile` is run WITHOUT `--` (npm then hides them in npm_config_* — see above).
+  const flagNoInstall = flagPresent(argv, '--no-install');
+  const flagNoBrowsers = flagPresent(argv, '--no-browsers');
+  const flagNoGha = flagPresent(argv, '--no-gha');
+  const flagYes = argv.includes('-y') || flagPresent(argv, '--yes');
   // Per-module opt-in flags (--mobile, --desktop), derived from the manifest.
   const moduleFlags = {};
   for (const key of MODULE_KEYS) {
-    moduleFlags[key] = argv.includes(MODULES[key].flag);
+    moduleFlags[key] = flagPresent(argv, MODULES[key].flag);
   }
   // First non-flag argument is the project directory.
   const positional = argv.find(a => !a.startsWith('-'));
@@ -891,9 +912,15 @@ ${colors.cyan}╔═════════════════════
     }
   }
 
-  // GitHub Actions workflow, unless the user opted out.
-  if (includeGha && copyFile(path.join(packageRoot, GHA_WORKFLOW), path.join(targetDir, GHA_WORKFLOW))) {
-    copiedCount++;
+  // GitHub Actions workflow, unless the user opted out. Never clobber a workflow the user already has
+  // (e.g. when scaffolding into a current dir that's already a repo) — keep theirs and just warn.
+  if (includeGha) {
+    const ghaDest = path.join(targetDir, GHA_WORKFLOW);
+    if (fs.existsSync(ghaDest)) {
+      log.warn(`Kept your existing ${GHA_WORKFLOW} (not overwritten)`);
+    } else if (copyFile(path.join(packageRoot, GHA_WORKFLOW), ghaDest)) {
+      copiedCount++;
+    }
   }
 
   // Opt-in engine modules (mobile/desktop), driven by the MODULES manifest. `tests/<mod>` and any
