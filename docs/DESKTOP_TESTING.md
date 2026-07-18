@@ -57,7 +57,7 @@ desktop/example-app/              a tiny, build-free Electron app so the example
 ## Running
 
 ```bash
-npm run test:desktop     # DESKTOP=1 playwright test --project=desktop
+npm run test:desktop     # cross-env DESKTOP=1 playwright test --project=desktop
 ```
 
 The `desktop` project is **opt-in and gated** exactly like mobile: it's registered only when

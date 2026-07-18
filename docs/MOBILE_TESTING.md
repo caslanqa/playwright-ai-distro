@@ -91,7 +91,7 @@ needs no device):
 npm run test:mobile
 ```
 
-`test:mobile` runs `MOBILE=1 playwright test --project=mobile --workers=3` — up to 3 workers, with a
+`test:mobile` runs `cross-env MOBILE=1 playwright test --project=mobile --workers=3` — up to 3 workers, with a
 per-device lock so tests on distinct devices run in parallel and same-device tests serialize (see
 [Running in parallel](#running-in-parallel)). With a single device it effectively runs serially.
 

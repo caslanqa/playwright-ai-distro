@@ -88,7 +88,7 @@ the suite stays green on machines without the toolchain.
 ## Running
 
 ```bash
-npm run test:native      # NATIVE=1 playwright test --project=native --workers=1
+npm run test:native      # cross-env NATIVE=1 playwright test --project=native --workers=1
 ```
 
 The `native` project is **opt-in and gated** exactly like mobile/desktop: registered only when

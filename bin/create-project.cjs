@@ -106,7 +106,7 @@ branching — or with a Maestro YAML flow via \`maestro.run('…')\` (see \`test
 named device is auto-booted if it isn't running:
 
 \`\`\`bash
-npm run test:mobile   # MOBILE=1 playwright test --project=mobile --workers=3
+npm run test:mobile   # cross-env MOBILE=1 playwright test --project=mobile --workers=3
 \`\`\`
 
 No device yet? \`npm run mobile:create-device\` builds one from your installed SDK/Xcode (interactive
@@ -128,7 +128,7 @@ like the UI tests — the Electron window is a Playwright \`Page\`, so locators,
 \`expectAi\` all work on it:
 
 \`\`\`bash
-npm run test:desktop   # DESKTOP=1 playwright test --project=desktop
+npm run test:desktop   # cross-env DESKTOP=1 playwright test --project=desktop
 \`\`\`
 
 Point \`desktop/apps.ts\` at your app (an Electron \`main\` script or a packaged \`executablePath\`), or
@@ -154,7 +154,7 @@ WebDriver — the window is NOT a Playwright \`Page\`, so tests use the imperati
 \`expectAi\` on a screenshot:
 
 \`\`\`bash
-npm run test:native   # NATIVE=1 playwright test --project=native --workers=1
+npm run test:native   # cross-env NATIVE=1 playwright test --project=native --workers=1
 \`\`\`
 
 Point \`native/apps.ts\` at your app (macOS \`bundleId\`/\`appPath\`, or Windows \`appPath\`/\`windowsApp\`),
@@ -176,6 +176,12 @@ WinAppDriver + Developer Mode. Tests skip cleanly when Appium isn't available. S
 //   when opted out. `scripts` / `devDependencies` are built fresh into package.json (never leak).
 // - `configGate` / `configProject` are used ONLY by the add-on flow to auto-append into an existing
 //   playwright.config.ts that predates the module (new scaffolds already carry both gates).
+// cross-env prefixes the module test scripts so the inline env var (MOBILE=1 / DESKTOP=1 / NATIVE=1)
+// works on Windows too (cmd/PowerShell don't accept `VAR=1 cmd` syntax). Declared per-module so the
+// add-on flow (`npm init … . --mobile` on an existing project) installs it alongside the script — the
+// create flow already gets it via the base devDependencies. Keep in sync with this repo's package.json.
+const CROSS_ENV_VERSION = '^10.1.0';
+
 const MODULES = {
   mobile: {
     flag: '--mobile',
@@ -186,10 +192,10 @@ const MODULES = {
     sharedFiles: ['fixtures/mobileFixtures.ts'],
     docs: ['docs/MOBILE_TESTING.md', 'docs/MOBILE_CHEATSHEET.md'],
     scripts: {
-      'test:mobile': 'MOBILE=1 playwright test --project=mobile --workers=3',
+      'test:mobile': 'cross-env MOBILE=1 playwright test --project=mobile --workers=3',
       'mobile:create-device': 'node mobile/create-device.mjs',
     },
-    devDependencies: {},
+    devDependencies: { 'cross-env': CROSS_ENV_VERSION },
     tsconfigPaths: { '@mobile/*': ['mobile/*'] },
     envKeys: {
       MOBILE_PLATFORM: 'android',
@@ -215,8 +221,8 @@ const MODULES = {
     testsDir: 'tests/desktop',
     sharedFiles: ['fixtures/desktopFixtures.ts'],
     docs: ['docs/DESKTOP_TESTING.md'],
-    scripts: { 'test:desktop': 'DESKTOP=1 playwright test --project=desktop' },
-    devDependencies: { electron: DESKTOP_ELECTRON_VERSION },
+    scripts: { 'test:desktop': 'cross-env DESKTOP=1 playwright test --project=desktop' },
+    devDependencies: { 'cross-env': CROSS_ENV_VERSION, electron: DESKTOP_ELECTRON_VERSION },
     tsconfigPaths: { '@desktop/*': ['desktop/*'] },
     envKeys: { DESKTOP_APP: 'example' },
     readmeSection: DESKTOP_README_SECTION,
@@ -234,8 +240,8 @@ const MODULES = {
     testsDir: 'tests/native',
     sharedFiles: ['fixtures/nativeFixtures.ts'],
     docs: ['docs/NATIVE_TESTING.md'],
-    scripts: { 'test:native': 'NATIVE=1 playwright test --project=native --workers=1' },
-    devDependencies: { appium: NATIVE_APPIUM_VERSION, webdriverio: NATIVE_WDIO_VERSION },
+    scripts: { 'test:native': 'cross-env NATIVE=1 playwright test --project=native --workers=1' },
+    devDependencies: { 'cross-env': CROSS_ENV_VERSION, appium: NATIVE_APPIUM_VERSION, webdriverio: NATIVE_WDIO_VERSION },
     tsconfigPaths: { '@native/*': ['native/*'] },
     envKeys: { NATIVE_PLATFORM: 'mac', NATIVE_APP: 'textEdit', NATIVE_SERVER_URL: '' },
     readmeSection: NATIVE_README_SECTION,

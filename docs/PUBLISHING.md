@@ -1,73 +1,77 @@
-# NPM'e Yayınlama Kılavuzu
+# Publishing to npm
 
-Bu doküman `@caslanqa/create-playwright-ai` paketini npm'e nasıl yayınlayacağınızı ve son
-kullanıcıların nasıl kuracağını anlatır. (Bu, framework'ü dağıtan **scaffolder** paketidir; son
-kullanıcı `npm init` ile kullanır.)
+This document explains how to publish the `@caslanqa/create-playwright-ai` package to npm and how end
+users install it. (This is the **scaffolder** package that distributes the framework; end users consume
+it via `npm init`.)
 
-## 🚀 GitHub Actions ile Otomatik Yayınlama (Önerilen)
+## 🚀 Automated Publishing with GitHub Actions (Recommended)
 
-### 1. NPM Token Oluşturma
+### 1. Create an npm Token
 
 1. [npmjs.com](https://www.npmjs.com) → Avatar → Access Tokens
 2. "Generate New Token" → "Classic Token" → "Automation"
-3. Token'ı kopyalayın
+3. Copy the token
 
-### 2. GitHub Secret Ekleme
+### 2. Add the GitHub Secret
 
 1. GitHub repo → Settings → Secrets and variables → Actions → "New repository secret"
-2. Name: `NPM_TOKEN`, Value: npm token'ınız → "Add secret"
+2. Name: `NPM_TOKEN`, Value: your npm token → "Add secret"
 
-### 3. Yayınlama (Manuel Trigger)
+### 3. Publish (Manual Trigger)
 
 1. GitHub repo → Actions → **"Publish to npm"** → "Run workflow"
-2. Seçenekleri belirleyin:
+2. Choose the options:
    - **version_type**: `patch` / `minor` / `major`
-   - **dry_run**: test için `true`, gerçek yayın için `false`
+   - **dry_run**: `true` to test, `false` for a real publish
    - **tag**: `latest` / `beta` / `next`
-3. "Run workflow" tıklayın
+3. Click "Run workflow"
 
-```
+```text
 patch: 1.2.0 → 1.2.1 (bug fix)
-minor: 1.2.0 → 1.3.0 (yeni özellik)
+minor: 1.2.0 → 1.3.0 (new feature)
 major: 1.2.0 → 2.0.0 (breaking change)
 ```
 
-`.github/workflows/publish.yml` ne yapar: lint + type-check → versiyon bump → CHANGELOG güncelle →
+What `.github/workflows/publish.yml` does: lint + type-check → version bump → update CHANGELOG →
 git commit + tag → `npm publish --access public` → GitHub Release.
 
+> **Note:** The workflow pushes the version-bump commit back to the branch it was dispatched from
+> (`github.ref_name`), not a hardcoded `main` — so it works whether you run it from `main` or a
+> feature branch.
+
 ---
 
-## 📦 Manuel Yayınlama (Alternatif)
+## 📦 Manual Publishing (Alternative)
 
 ```bash
-npm login                 # npmjs hesabınızla giriş
-npm run lint              # kontroller
+npm login                 # sign in with your npmjs account
+npm run lint              # checks
 npm run type-check
-npm pack --dry-run        # tarball içeriğini gözden geçirin
-npm version patch         # veya minor / major
-npm publish --access public   # scoped paket → --access public şart
+npm pack --dry-run        # review the tarball contents
+npm version patch         # or minor / major
+npm publish --access public   # scoped package → --access public is required
 ```
 
-> **Not:** Yayınlamadan önce `npm pack --dry-run` çıktısında `env/environments.json` veya
-> `testData/users.json` gibi **local** dosyaların OLMADIĞINI doğrulayın — yalnızca `*.example.json`
-> gönderilir (`package.json` `files` bunu sağlar).
+> **Note:** Before publishing, verify that the `npm pack --dry-run` output does NOT include **local**
+> files like `env/environments.json` or `testData/users.json` — only the `*.example.json` files should
+> be shipped (the `files` field in `package.json` enforces this).
 
 ---
 
-## 🖥️ Son Kullanıcı Kurulumu
+## 🖥️ End-User Installation
 
-Yayınlandıktan sonra herhangi bir makinede tek komutla kullanıma hazır proje:
+Once published, a ready-to-run project is one command away on any machine:
 
 ```bash
-# npm, scoped "create" paketini otomatik @caslanqa/create-playwright-ai'a çözer
+# npm automatically resolves the scoped "create" package to @caslanqa/create-playwright-ai
 npm init @caslanqa/playwright-ai@latest my-project
 
 cd my-project
-npm test                       # çalışır durumda
-npx playwright install         # UI testleri için tarayıcılar (API/AI-judge için gerekmez)
+npm test                       # ready to run
+npx playwright install         # browsers for UI tests (not needed for API/AI-judge)
 ```
 
-Eşdeğer formlar:
+Equivalent forms:
 
 ```bash
 npm  create @caslanqa/playwright-ai@latest my-project
@@ -76,15 +80,15 @@ yarn create @caslanqa/playwright-ai my-project
 pnpm create @caslanqa/playwright-ai my-project
 ```
 
-Flag'ler: `--no-install`, `--no-browsers`, `--no-gha`, `-y/--yes`.
+Flags: `--no-install`, `--no-browsers`, `--no-gha`, `-y/--yes`.
 
 ---
 
-## 🔢 Versiyon Yönetimi
+## 🔢 Version Management
 
 ```bash
-npm view @caslanqa/create-playwright-ai version     # yayındaki sürüm
-npm view @caslanqa/create-playwright-ai versions    # tüm sürümler
+npm view @caslanqa/create-playwright-ai version     # published version
+npm view @caslanqa/create-playwright-ai versions    # all versions
 
 # Beta
 npm version prerelease --preid=beta
@@ -94,9 +98,9 @@ npx @caslanqa/create-playwright-ai@beta my-project
 
 ---
 
-## ❓ Sorun Giderme
+## ❓ Troubleshooting
 
-- **"You must be logged in"** → `npm login` (kontrol: `npm whoami`).
-- **"Permission denied" / scoped paket** → `npm publish --access public`.
-- **Yanlış dosyalar yayınlanıyor** → `package.json` `files` alanını ve `npm pack --dry-run` çıktısını
-  kontrol edin.
+- **"You must be logged in"** → `npm login` (check with `npm whoami`).
+- **"Permission denied" / scoped package** → `npm publish --access public`.
+- **Wrong files being published** → check the `files` field in `package.json` and the
+  `npm pack --dry-run` output.
