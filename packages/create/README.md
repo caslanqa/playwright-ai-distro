@@ -72,7 +72,9 @@ npx create-pwtap add    <plugin...>    # add plugins to an existing project
 npx create-pwtap remove <plugin...>    # remove plugins
 ```
 
-Flags: `-y` / `--yes` (accept defaults, skip the menu), `--no-install` (skip `npm install`), `--no-browsers` (skip the Playwright browser download), `--ai-judge` (preselect a plugin).
+Flags: `-y` / `--yes` (accept defaults, skip the menu), `--no-install` (skip `npm install`), `--no-browsers` (skip the Playwright browser download), `--tests-dir <name>` (tests folder), `--gha` (add a GitHub Actions workflow), `--ai-judge` (preselect a plugin).
+
+Interactively (no `-y`), `create` first collects **package.json metadata** — name, version, description, author (defaulted from your git identity), keywords, repository URL, license — then the platform questions: tests-folder name, plugins, GitHub Actions workflow, install browsers, and (on Linux) OS dependencies. Press Enter to accept any default.
 
 ## Requirements
 
