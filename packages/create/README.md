@@ -3,7 +3,7 @@
 Scaffold a **Playwright Test Automation Platform** project — an editable UI + API testing core with opt-in, separately-published plugins.
 
 [![npm](https://img.shields.io/npm/v/@pwtap/create)](https://www.npmjs.com/package/@pwtap/create)
-[![license](https://img.shields.io/npm/l/@pwtap/create)](https://github.com/caslanqa/playwright-ai-distro/blob/main/LICENSE)
+[![license](https://img.shields.io/npm/l/@pwtap/create)](https://github.com/caslanqa/test-automation-platform/blob/main/LICENSE)
 [![node](https://img.shields.io/node/v/@pwtap/create)](https://nodejs.org)
 
 > **This is a scaffolder (`create-*`), not a library.** The `npm i …` box npm shows at the top of this page is auto-generated — **don't use it.** Create a ready-to-run project with `npm init` / `npm create`:

@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/caslanqa/playwright-ai-distro.git",
+    "url": "git+https://github.com/caslanqa/test-automation-platform.git",
     "directory": "packages/plugin-ai-judge"
   },
   "engines": {
