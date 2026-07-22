@@ -21,7 +21,7 @@ permissions:
 jobs:
   release:
     # Never run on forks — publishing belongs to the canonical repo only.
-    if: github.repository == 'caslanqa/playwright-ai-distro'
+    if: github.repository == 'caslanqa/test-automation-platform'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

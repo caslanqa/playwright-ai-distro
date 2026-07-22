@@ -7,7 +7,7 @@ import { expect, test } from '@fixtures';
  * fixtures/auth.ts → ensureSession) which caches `.auth/demoUser.json`; every later test and run
  * reuses that file — no repeated logins, no setup project.
  *
- * Run: `npx playwright test tests/example/authSession.spec.ts --project=chromium`
+ * Run: `npx playwright test tests/ui/authSession.spec.ts --project=chromium`
  *
  * NOTE: each session needs its own describe with a single `test.use({ session })` — two `test.use`
  * calls in one describe do not create two scopes; the last one wins for every test in that describe.
