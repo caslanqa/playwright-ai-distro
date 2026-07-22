@@ -13,7 +13,7 @@ import { readJson } from './util/fs.js';
  *   id: 'maestro', name: '@pwtap/plugin-maestro',
  *   devDependencies: {}, scripts: { 'test:maestro': 'MAESTRO=1 playwright test --project=maestro' },
  *   envKeys: { MOBILE_PLATFORM: 'android' },
- *   fixture: { importFrom: '@pwtap/plugin-maestro', testAlias: 'maestroTest' },
+ *   fixture: { importFrom: '@pwtap/plugin-maestro', test: { alias: 'maestroTest' } },
  * };
  */
 export interface PluginManifest {
@@ -24,10 +24,10 @@ export interface PluginManifest {
   envKeys: Record<string, string>;
   fixture?: {
     importFrom: string;
-    testExport?: string;
-    testAlias: string;
-    expectExport?: string;
-    expectAlias?: string;
+    /** Composable test object merged via mergeTests. Omit for matcher-only plugins (e.g. ai-judge). */
+    test?: { export?: string; alias: string };
+    /** Custom-matcher `expect` merged via mergeExpects. Omit for fixture-only plugins (e.g. maestro). */
+    expect?: { export?: string; alias: string };
   };
   playwrightProject?: {
     gateVar: string;

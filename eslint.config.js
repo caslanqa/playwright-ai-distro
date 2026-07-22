@@ -16,6 +16,7 @@ export default [
       '**/allure-results/**',
       '**/allure-report/**',
       'packages/create/template/**',
+      '**/templates/**',
       '**/*.log',
     ],
   },

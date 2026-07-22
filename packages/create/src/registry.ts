@@ -47,7 +47,7 @@ export const KNOWN_PLUGINS: KnownPlugin[] = [
     description: 'AI/LLM judge matchers (toPassRubric, toScoreAtLeast, toMatchImage)',
     flag: '--ai-judge',
     defaultSelected: false,
-    status: 'coming-soon',
+    status: 'stable',
   },
 ];
 

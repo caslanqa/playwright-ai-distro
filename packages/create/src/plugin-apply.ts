@@ -24,8 +24,8 @@ function injectManifest(clientDir: string, m: PluginManifest): void {
 
   if (applyFixture(clientDir, m) === false) {
     log.warn(
-      `fixtures/index.ts is missing a pwtap marker — add this to the barrel manually:\n` +
-        `  import { test as ${m.fixture?.testAlias} } from '${m.fixture?.importFrom}';  // + add to mergeTests(...)`,
+      `fixtures/index.ts is missing a pwtap marker — wire ${m.name} into the barrel manually ` +
+        `(import from '${m.fixture?.importFrom}' and add to mergeTests/mergeExpects).`,
     );
   }
   if (applyProject(clientDir, m) === false) {

@@ -3,6 +3,7 @@
   "files": [],
   "references": [
     { "path": "packages/platform" },
-    { "path": "packages/create" }
+    { "path": "packages/create" },
+    { "path": "packages/plugin-ai-judge" }
   ]
 }

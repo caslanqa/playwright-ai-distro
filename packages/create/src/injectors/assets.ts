@@ -8,7 +8,20 @@ import { copyDir, ensureDir, exists } from '../util/fs.js';
 function packageRoot(clientDir: string, pkg: string): string | null {
   try {
     const require = createRequire(`${clientDir}/`);
-    return path.dirname(require.resolve(`${pkg}/package.json`, { paths: [clientDir] }));
+    // Resolve the package's main entry (always allowed by "exports"), then walk up to its package.json.
+    // Resolving `${pkg}/package.json` directly fails when a package restricts subpaths via "exports".
+    let dir = path.dirname(require.resolve(pkg, { paths: [clientDir] }));
+    for (let i = 0; i < 8; i++) {
+      if (exists(path.join(dir, 'package.json'))) {
+        return dir;
+      }
+      const parent = path.dirname(dir);
+      if (parent === dir) {
+        break;
+      }
+      dir = parent;
+    }
+    return null;
   } catch {
     return null;
   }
