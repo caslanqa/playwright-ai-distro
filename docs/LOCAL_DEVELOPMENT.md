@@ -7,7 +7,7 @@ so nothing touches the registry.
 - [1. Build the toolchain](#1-build-the-toolchain)
 - [2. Scaffold a core project](#2-scaffold-a-core-project)
 - [3. Add a plugin locally](#3-add-a-plugin-locally)
-- [4. Iterating: edit, rebuild, reinstall](#4-iterating-edit-rebuild-reinstall)
+- [4. Iterating (edit → rebuild → reinstall)](#4-iterating-edit--rebuild--reinstall)
 - [5. Optional: a global `create-pwtap`](#5-optional-a-global-create-pwtap)
 - [6. Smoke test](#6-smoke-test)
 - [Notes](#notes)
@@ -51,6 +51,11 @@ npm test                                  # chromium + api
 
 Plugins aren't installed from npm here — you pack a tarball from the monorepo and install it.
 
+> **Where to run `add` / `remove`:** from **inside the scaffolded project** (e.g. `~/pwtap-demo`),
+> _not_ the monorepo. They operate on the current directory (`process.cwd()`); the
+> `node <repo>/packages/create/dist/index.js` prefix is only the path to the CLI file — what it wires
+> up is wherever you `cd`'d to. (With a global `create-pwtap`, see §5, it's just `create-pwtap add …`.)
+
 **AI Judge** (no other `@pwtap` deps):
 
 ```bash
@@ -86,7 +91,7 @@ keys, an env-gated Playwright project, example specs, docs, scripts).
 > cd ~/pwtap-demo && npm install -D ~/pwtap-platform-*.tgz ~/pwtap-plugin-maestro-*.tgz
 > ```
 
-## 4. Iterating: edit, rebuild, reinstall
+## 4. Iterating (edit → rebuild → reinstall)
 
 After changing a plugin's source:
 

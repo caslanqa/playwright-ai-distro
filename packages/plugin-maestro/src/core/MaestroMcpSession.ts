@@ -92,7 +92,7 @@ export class MaestroMcpSession {
     private readonly device: DiscoveredDevice,
     private readonly hooks: McpSessionHooks,
     private readonly screenshotMode: ScreenshotMode = resolveScreenshotMode(),
-    private readonly binary: string = process.env.MAESTRO_BIN ?? 'maestro',
+    private readonly binary: string = process.env.MAESTRO_BIN || 'maestro',
   ) {}
 
   /** Spawn `maestro mcp` and complete the MCP handshake on first use; reused on later calls. */

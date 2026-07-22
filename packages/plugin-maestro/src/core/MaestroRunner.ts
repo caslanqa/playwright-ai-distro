@@ -16,7 +16,7 @@ let parallelSupport: boolean | undefined;
  * When false, the fixture serializes all runs so `--workers>1` stays safe (no speedup). Detected once.
  */
 export function maestroSupportsParallel(
-  binary: string = process.env.MAESTRO_BIN ?? 'maestro',
+  binary: string = process.env.MAESTRO_BIN || 'maestro',
 ): boolean {
   if (parallelSupport === undefined) {
     const override = process.env.MOBILE_PARALLEL?.trim();
@@ -79,7 +79,7 @@ export class MaestroRunner {
   private readonly binary: string;
 
   /** @param binary Maestro executable; defaults to `MAESTRO_BIN` env or `maestro` on PATH. */
-  constructor(binary: string = process.env.MAESTRO_BIN ?? 'maestro') {
+  constructor(binary: string = process.env.MAESTRO_BIN || 'maestro') {
     this.binary = binary;
   }
 

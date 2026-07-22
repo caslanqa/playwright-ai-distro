@@ -16,7 +16,7 @@ export async function ensure(): Promise<void> {
   const p = getPlatform();
   const warn = (message: string): void => console.warn(`[maestro] ${message}`);
 
-  if (!p.which(process.env.MAESTRO_BIN ?? 'maestro')) {
+  if (!p.which(process.env.MAESTRO_BIN || 'maestro')) {
     warn(
       'Maestro CLI not found — install it: `curl -fsSL "https://get.maestro.mobile.dev" | bash` ' +
         '(see https://maestro.mobile.dev). Then reopen your shell.',
