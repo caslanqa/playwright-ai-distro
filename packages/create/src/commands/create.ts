@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -39,10 +40,12 @@ export async function createProject(opts: CreateOptions): Promise<void> {
     fs.rmSync(path.join(targetDir, 'templates'), { recursive: true, force: true });
   }
 
-  // 2. Gather answers — mirrors the official `npm init playwright` questions (minus TS/JS: this
-  //    platform is TypeScript-only). Non-interactive (`-y` or no TTY) takes every default.
+  // 2. Gather answers — package.json metadata (npm-init style) + the `npm init playwright`-style
+  //    platform questions (minus TS/JS: this platform is TypeScript-only). Non-interactive (`-y` or
+  //    no TTY) takes every default; Enter accepts a shown default interactively.
   const prompter = new Prompter(opts.yes);
   let name: string;
+  let meta: ProjectMeta;
   let testsDir: string;
   let selectedIds: string[];
   let addGha: boolean;
@@ -50,6 +53,14 @@ export async function createProject(opts: CreateOptions): Promise<void> {
   let installOsDeps: boolean;
   try {
     name = await prompter.text('Project name', path.basename(targetDir));
+    meta = {
+      version: await prompter.text('Version', '0.1.0'),
+      description: await prompter.text('Description', ''),
+      author: await prompter.text('Author', defaultAuthor()),
+      keywords: parseKeywords(await prompter.text('Keywords (comma-separated)', '')),
+      repository: (await prompter.text('Repository URL', '')).trim(),
+      license: await prompter.text('License', 'MIT'),
+    };
     testsDir = sanitizeDir(await prompter.text('Where to put your tests?', opts.testsDirDefault));
     selectedIds =
       opts.selectedPluginIds.length > 0
@@ -75,7 +86,7 @@ export async function createProject(opts: CreateOptions): Promise<void> {
 
   // 4. Write the base package.json from the core manifest (records testsDir so `add` places plugin
   //    examples in the right folder later).
-  writeBasePackageJson(targetDir, name, coreManifestPath, testsDir);
+  writeBasePackageJson(targetDir, name, meta, coreManifestPath, testsDir);
 
   // 5. Optional GitHub Actions workflow for the scaffolded project.
   if (addGha) {
@@ -148,23 +159,76 @@ function patchFile(file: string, replacer: (content: string) => string): void {
   }
 }
 
+/** package.json metadata collected interactively (npm-init style). */
+interface ProjectMeta {
+  version: string;
+  description: string;
+  author: string;
+  keywords: string[];
+  repository: string;
+  license: string;
+}
+
+/** Split a comma-separated keywords answer into a trimmed, empty-free list. */
+function parseKeywords(input: string): string[] {
+  return input
+    .split(',')
+    .map(keyword => keyword.trim())
+    .filter(Boolean);
+}
+
+/** A sensible default `author` from the user's git identity (`Name <email>`), or '' if unset. */
+function defaultAuthor(): string {
+  const name = gitConfig('user.name');
+  const email = gitConfig('user.email');
+  return name ? (email ? `${name} <${email}>` : name) : '';
+}
+
+/** Read a global git config value, or '' when git isn't available / the key is unset. */
+function gitConfig(key: string): string {
+  try {
+    return execFileSync('git', ['config', '--get', key], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return '';
+  }
+}
+
 function writeBasePackageJson(
   targetDir: string,
   name: string,
+  meta: ProjectMeta,
   coreManifestPath: string,
   testsDir: string,
 ): void {
   const core = loadCoreManifest(coreManifestPath);
-  writeJson(path.join(targetDir, 'package.json'), {
+  // Build in npm-conventional order; optional metadata is included only when the user provided it.
+  const pkg: Record<string, unknown> = {
     name,
-    version: '0.1.0',
+    version: meta.version || '0.1.0',
     private: true,
     type: 'module',
-    scripts: sortObject(core.scripts),
-    devDependencies: sortObject(core.devDependencies),
-    ...(core.packageJson ?? {}),
-    pwtap: { testsDir },
-  });
+  };
+  if (meta.description) {
+    pkg.description = meta.description;
+  }
+  if (meta.author) {
+    pkg.author = meta.author;
+  }
+  pkg.license = meta.license || 'MIT';
+  if (meta.keywords.length > 0) {
+    pkg.keywords = meta.keywords;
+  }
+  if (meta.repository) {
+    pkg.repository = { type: 'git', url: meta.repository };
+  }
+  pkg.scripts = sortObject(core.scripts);
+  pkg.devDependencies = sortObject(core.devDependencies);
+  Object.assign(pkg, core.packageJson ?? {});
+  pkg.pwtap = { testsDir };
+  writeJson(path.join(targetDir, 'package.json'), pkg);
 }
 
 /** Standard Playwright CI — mirrors the workflow `npm init playwright` generates. */
