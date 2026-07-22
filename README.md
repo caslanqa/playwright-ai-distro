@@ -1,441 +1,254 @@
-# Playwright AI Distro
+# Playwright Test Automation Platform
 
-A production-ready, standalone Playwright test automation framework with built-in **AI Judge** capabilities for LLM-powered response evaluation.
+An **editable UI + API testing core** you scaffold into your project with one command, plus an ecosystem of **opt-in, separately-published plugins** (AI Judge today; mobile, performance, desktop, and security engines planned). macOS-first — other operating systems are additive behind a single platform seam.
 
-[![npm version](https://img.shields.io/npm/v/@caslanqa/create-playwright-ai)](https://www.npmjs.com/package/@caslanqa/create-playwright-ai)
-[![license](https://img.shields.io/npm/l/@caslanqa/create-playwright-ai)](https://github.com/caslanqa/playwright-ai-distro/blob/main/LICENSE)
-[![node](https://img.shields.io/node/v/@caslanqa/create-playwright-ai)](https://nodejs.org)
+[![@pwtap/create](https://img.shields.io/npm/v/@pwtap/create?label=%40pwtap%2Fcreate)](https://www.npmjs.com/package/@pwtap/create)
+[![license](https://img.shields.io/npm/l/@pwtap/create)](LICENSE)
+[![node](https://img.shields.io/node/v/@pwtap/create)](https://nodejs.org)
 
-> **This is a scaffolder (`create-*`), not a library.** The `npm i …` box at the top of this npm page
-> is auto-generated — **don't use it.** Create a ready-to-run project with `npm init` / `npm create`:
+## Table of contents
 
-```bash
-npm init @caslanqa/playwright-ai@latest my-project
-```
+- [Overview](#overview)
+- [Requirements](#requirements)
+- [Quickstart](#quickstart)
+- [Packages](#packages)
+- [The core](#the-core)
+- [Authentication](#authentication)
+- [Plugins](#plugins)
+- [AI Judge](#ai-judge)
+- [Project structure](#project-structure)
+- [CLI reference](#cli-reference)
+- [Configuration](#configuration)
+- [Scripts](#scripts)
+- [Development](#development)
+- [Releasing and publishing](#releasing-and-publishing)
+- [Roadmap](#roadmap)
+- [License](#license)
 
-## 🚀 Key Features
+## Overview
 
-- **AI Judge System** - Evaluate chatbot/LLM responses using local or cloud models
-- **Dual LLM Routing** - Ollama (local, free) or 9Router gateway (Claude, GPT)
-- **Layered API Testing** - `ApiClient` → service → test structure (Petstore v3 example)
-- **Mobile Testing** - Maestro YAML flows orchestrated by Playwright, opt-in (`--mobile`)
-- **Lazy Session Auth** - Cached storageState per session, worker-safe, opt-in
-- **Page Object Model** - Clean, maintainable test structure
-- **Environment-Driven** - JSON-based configuration, zero hardcoded values
-- **Full Tooling** - ESLint, Prettier, husky + lint-staged, commitlint out of the box
-- **Full CI/CD** - GitHub Actions with Ollama setup
+`npm init @pwtap` scaffolds a ready-to-run Playwright project whose **core is copied in as editable source** — you own the UI and API layers outright, rather than importing them from `node_modules`. Every testing engine beyond UI + API (AI Judge, mobile, and so on) is a **real npm package** you opt into; a typed manifest wires each one into your project and out again, reversibly.
 
-## 🧰 Requirements
+Three ideas hold it together:
 
-Only **Node.js ≥ 18** is always required. Everything else is per-feature and installed by _you_ (the
-scaffolder installs the npm deps + Playwright browsers, but not these system-level tools):
+- **Core is yours.** The scaffolder copies the UI + API framework into your repo. Edit it freely.
+- **Plugins are packages.** `add` / `remove` inject fixtures, env keys, an example spec, and a Playwright project through marker-managed regions — no lock-in, fully undoable.
+- **One seam for the OS.** All platform-specific work (device discovery, boot, locking) lives behind [`@pwtap/platform`](packages/platform), so engines stay portable.
 
-| For             | You need                                                                                                                                                                                                                                                                                                                                |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Everything      | **Node.js ≥ 18**                                                                                                                                                                                                                                                                                                                        |
-| UI tests        | Playwright browsers — `npx playwright install`                                                                                                                                                                                                                                                                                          |
-| API tests       | nothing beyond Node (they call an HTTP endpoint)                                                                                                                                                                                                                                                                                        |
-| AI Judge        | [Ollama](https://ollama.com) + a pulled model (local), **or** a 9Router gateway + `JUDGE_API_KEY`                                                                                                                                                                                                                                       |
-| Mobile (opt-in) | [Maestro](https://maestro.mobile.dev) CLI + **Java 17+**, and a device: Android SDK + emulator, or (macOS) Xcode + iOS simulator. To build an AVD via `mobile:create-device` you also need the Android command-line tools — [setup (macOS/Windows/Linux, GUI or CLI)](docs/MOBILE_TESTING.md#installing-the-android-command-line-tools) |
+## Requirements
 
-## 📦 Create a new project
+- **Node.js ≥ 20.19**
+- **macOS-first.** UI + API work everywhere Node runs; the mobile/desktop engines target macOS today. Other OSes throw a clear "add this file" error rather than misbehaving silently.
 
-Scaffold a ready-to-run project with a single command — exactly like the
-official Playwright (`npm init playwright@latest`):
-
-```bash
-npm init @caslanqa/playwright-ai@latest my-project
-```
-
-Equivalent forms:
+## Quickstart
 
 ```bash
-npm  create @caslanqa/playwright-ai@latest my-project
-npx  @caslanqa/create-playwright-ai my-project
-yarn create @caslanqa/playwright-ai my-project
-pnpm create @caslanqa/playwright-ai my-project
+npm init @pwtap@latest my-tests        # scaffold the UI + API core (npm create @pwtap@latest also works)
+cd my-tests
+cp env/environments.example.json env/environments.json   # point BASE_URL / API_BASE_URL at your app
+cp testData/users.example.json   testData/users.json      # named login sessions (optional)
+npm test                                                   # runs the chromium + api projects
 ```
 
-The scaffolder copies the framework, generates `package.json`, runs `npm install`, installs the
-Playwright browsers, and initializes git (so husky hooks activate). **After it finishes:**
+Add an engine whenever you need it:
 
 ```bash
-cd my-project
-
-# 1. Point the config at your app:
-#    env/environments.json  → BASE_URL (UI) + API_BASE_URL (API)
-#    testData/users.json    → your login sessions (optional)
-
-# 2. Run the tests:
-npm test              # everything
-npm run test:api      # API only (no browser needed)
-npm run test:ui       # interactive UI mode
+npx create-pwtap add ai-judge          # installs @pwtap/plugin-ai-judge and wires it in
 ```
 
-Flags: `--no-install` (skip `npm install`), `--no-browsers` (skip browser download), `--no-gha` (skip
-the GitHub Actions workflow), `--mobile` (include mobile testing / Maestro), `-y/--yes` (accept
-defaults). Omit the project name to scaffold into the current directory.
+## Packages
 
-## 🛠️ Develop this framework (contributors)
+This repository is an npm-workspaces monorepo.
+
+| Package                                                                | Role                                                                                        | Published  |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------- |
+| [`@pwtap/create`](packages/create)                                     | The scaffolder — `npm init @pwtap`. Copies the editable core in and wires plugins.          | ✅         |
+| [`@pwtap/platform`](packages/platform)                                 | macOS-first platform seam (paths, shell, device discovery/boot, lock) used by plugins.      | ✅         |
+| [`@pwtap/plugin-ai-judge`](packages/plugin-ai-judge)                   | LLM-as-judge matchers (`toPassRubric` / `toScoreAtLeast` / `toMatchImage`), multi-provider. | ✅         |
+| `@pwtap/core-template`                                                 | The editable core source that `@pwtap/create` bundles. Private — never published.           | —          |
+| `@pwtap/plugin-maestro` · `-appium` · `-k6` · `-desktop` · `-security` | Mobile / performance / desktop / security engines.                                          | 🚧 planned |
+
+## The core
+
+The scaffolded project ships with:
+
+- **UI testing** — Chromium via the `chromium` project, with a Page Object Model (`pages/BasePage.ts`, `pages/LoginPage.ts`).
+- **API testing** — a layered client in a browser-free `api` project: `api/core/ApiClient.ts` (typed verbs) → `api/services/*` (business operations) → `tests/api/*.api.ts` (readable tests). The example targets [Petstore v3](https://petstore3.swagger.io).
+- **Lazy session auth** — named sessions log in once and cache per worker (see [Authentication](#authentication)).
+- **One fixtures barrel** — `fixtures/index.ts` composes `ui` + `api` (and any plugin) with `mergeTests` / `mergeExpects`, exported as `@fixtures`. Import everything from there:
+
+```ts
+import { test, expect } from '@fixtures';
+```
+
+- **Tooling** — ESLint, Prettier, husky + lint-staged, and commitlint, all pre-wired (the scaffolder runs `git init` so the hooks activate).
+
+## Authentication
+
+Session-based, opt-in, and lazy. Declare named sessions in `testData/users.json`; the first test that uses one logs in and caches it, and everything afterward reuses it. Choose the scope you need:
+
+```ts
+import { test, expect } from '@fixtures';
+
+// Whole file or describe:
+test.use({ session: 'admin' });
+test('dashboard is visible', async ({ page }) => {
+  await page.goto('/dashboard'); // already signed in as admin
+});
+
+// A single test:
+test.as('customer')('can check out', async ({ page }) => {
+  /* signed in as customer, just here */
+});
+
+// Test-level annotations compose too:
+test.as('admin').skip('WIP', async () => {}); // .skip / .only / .fixme / .fail
+```
+
+Unauthenticated tests (public pages) simply set nothing.
+
+## Plugins
+
+Plugins are opt-in npm packages wired through a typed manifest. Add or remove them any time:
 
 ```bash
-# Clone the repository
-git clone https://github.com/caslanqa/playwright-ai-distro.git
-cd playwright-ai-distro
-
-# Install dependencies
-npm install
-
-# Install Playwright browsers
-npx playwright install --with-deps
-
-# Copy example configuration files
-cp env/environments.example.json env/environments.json
-cp testData/users.example.json testData/users.json
+npx create-pwtap add ai-judge          # install + wire (fixtures, env keys, example spec, project)
+npx create-pwtap remove ai-judge       # cleanly undo
 ```
 
-## 🔧 Configuration
+| Plugin           | Package                  | Status         |
+| ---------------- | ------------------------ | -------------- |
+| AI Judge         | `@pwtap/plugin-ai-judge` | ✅ stable      |
+| Maestro (mobile) | `@pwtap/plugin-maestro`  | 🚧 coming soon |
+| Appium (mobile)  | `@pwtap/plugin-appium`   | 🚧 coming soon |
 
-### Environment Setup
+Each plugin registers an env-gated Playwright project, so a bare `npm test` always stays UI + API only. You can also preselect at scaffold time with a flag, e.g. `npm init @pwtap@latest my-tests --ai-judge`.
 
-Edit `env/environments.json` to configure your test environments:
+## AI Judge
+
+[`@pwtap/plugin-ai-judge`](packages/plugin-ai-judge) adds LLM-as-judge matchers to `expect`:
+
+```ts
+import { test, expect } from '@fixtures';
+
+test('bot states the opening hours', async () => {
+  await expect({
+    userMessage: 'What time do you open?',
+    botResponse: 'We open at 9am every day.',
+    rubric: 'Must state the store opens at 9am.',
+  }).toPassRubric({ minScore: 80 });
+});
+```
+
+Pick a model with `JUDGE_MODEL` (plus its API key) in `env/environments.json` → `common`. The model id's **prefix** routes it: `anthropic/` (native Claude), `openrouter/`, `nvidia/`, `openai/`, `groq/`, `local/` (Ollama), or no prefix for any OpenAI-compatible gateway. Bring your own provider with `registerProvider`. See the [plugin README](packages/plugin-ai-judge/README.md) for the full provider table and matcher reference.
+
+## Project structure
+
+A freshly scaffolded project (before any plugin):
+
+```text
+my-tests/
+├── api/
+│   ├── core/ApiClient.ts     # typed get/post/put/patch/delete over APIRequestContext
+│   ├── services/             # business operations (PetService)
+│   └── models/               # domain types (Pet, …)
+├── config/                   # loadEnv, envUtils
+├── env/environments.json     # BASE_URL (UI) + API_BASE_URL (API), per environment
+├── fixtures/
+│   ├── index.ts              # the @fixtures barrel (mergeTests / mergeExpects) — plugins merge here
+│   ├── ui.ts                 # UI test/expect + `session` option + test.as auth
+│   ├── api.ts                # apiClient + service fixtures (browser-free)
+│   └── auth.ts               # lazy session login + caching
+├── pages/                    # Page Object Models (BasePage, LoginPage)
+├── testData/users.json       # named login sessions
+├── tests/
+│   ├── ui/                   # UI examples (login, authSession)
+│   └── api/                  # API examples (*.api.ts)
+├── utils/                    # apiUtils, dateUtils (framework-agnostic helpers)
+├── playwright.config.ts      # chromium + api projects; plugin projects splice in via markers
+├── tsconfig.json · eslint.config.js · .prettierrc · .commitlintrc.json
+└── .husky/                   # pre-commit → lint-staged, commit-msg → commitlint
+```
+
+`add ai-judge` then adds `tests/ai-judge/` plus the wired fixtures and env keys.
+
+## CLI reference
+
+```text
+npm init @pwtap@latest [dir] [flags]   # scaffold (dir defaults to ".")
+npx create-pwtap add    <plugin...>    # add plugins to an existing project
+npx create-pwtap remove <plugin...>    # remove plugins
+```
+
+**Flags:** `-y` / `--yes` (accept defaults, skip the menu) · `--no-install` (skip `npm install`) · `--no-browsers` (skip the Playwright browser download) · `--ai-judge` (preselect a plugin).
+
+## Configuration
+
+**Environments** — `env/environments.json` holds per-environment scalars; select one with `TEST_ENV` (default `common.DEFAULT_TEST_ENV`). Every string is flattened to a `process.env` key by `config/loadEnv.ts`.
 
 ```json
 {
   "common": { "DEFAULT_TEST_ENV": "dev" },
   "environments": {
     "dev": {
-      "BASE_URL": "http://localhost:3000",
-      "API_BASE_URL": "http://localhost:3000/api"
+      "BASE_URL": "https://www.saucedemo.com/",
+      "API_BASE_URL": "https://petstore3.swagger.io/api/v3"
     }
   }
 }
 ```
 
-- `BASE_URL` — the UI base URL (Playwright `baseURL`).
-- `API_BASE_URL` — the API base URL (used by the API client, see [API Testing](#-api-testing)). Kept
-  separate from `BASE_URL` so UI and API targets never collide.
-- Every string scalar is flattened to a `process.env` key by `config/loadEnv.ts`. Select an
-  environment with `TEST_ENV` (e.g. `TEST_ENV=staging npm test`).
+`BASE_URL` is the UI `baseURL`; `API_BASE_URL` is the API project's base, kept separate so the two never collide. Run another environment with `TEST_ENV=staging npm test`.
 
-### User Credentials
+**Login sessions** — declare named users in `testData/users.json`; select one with `test.use({ session: 'admin' })` or `test.as('admin')(...)`.
 
-Edit `testData/users.json` to declare named login sessions:
+## Scripts
 
-```json
-{
-  "users": {
-    "admin": { "username": "admin@example.com", "password": "your_password" },
-    "customer": { "username": "customer@example.com", "password": "your_password" }
-  }
-}
-```
+Scripts available inside a scaffolded project:
 
-Sessions are logged in lazily on first use and cached to `.auth/<key>.json`; select one with
-`test.use({ session: 'admin' })`.
+| Script                      | Does                                    |
+| --------------------------- | --------------------------------------- |
+| `npm test`                  | Run all tests (`chromium` + `api`)      |
+| `npm run test:api`          | API tests only (no browser)             |
+| `npm run test:ui`           | Playwright UI mode                      |
+| `npm run test:headed`       | Headed run                              |
+| `npm run test:debug`        | Debug mode                              |
+| `npm run report:playwright` | Open the HTML report                    |
+| `npm run codegen`           | Playwright codegen                      |
+| `npm run lint` / `lint:fix` | ESLint                                  |
+| `npm run format`            | Prettier                                |
+| `npm run type-check`        | `tsc --noEmit`                          |
+| `npm run commit`            | Commitizen (conventional commit prompt) |
 
-## 🧪 Running Tests
+## Development
 
-```bash
-# Run all tests
-npx playwright test
-
-# Run only the API tests (no browser needed)
-npx playwright test --project=api
-
-# Run specific browser
-npx playwright test --project=chromium
-
-# Run with specific environment
-TEST_ENV=staging npx playwright test
-
-# Run tests with tag
-npx playwright test --grep @smoke
-
-# Run in UI mode (debugging)
-npx playwright test --ui
-
-# Generate report
-npx playwright show-report
-```
-
-## 🤖 AI Judge System
-
-The AI Judge evaluates chatbot/LLM responses against rubrics. See [docs/AI_JUDGE.md](docs/AI_JUDGE.md) for detailed documentation.
-
-### Quick Start
-
-```typescript
-import { judgeResponse } from '@utils/aiJudge';
-
-test('chatbot responds correctly', async () => {
-  const verdict = await judgeResponse({
-    userMessage: 'What time do you open?',
-    botResponse: 'We open at 9am every day.',
-    rubric: 'Must state the store opens at 9am.',
-  });
-
-  expect(verdict.pass, verdict.reasoning).toBeTruthy();
-});
-```
-
-### Model Selection
-
-Model choice is **automatic** by default. The judge scores each call's complexity into a tier
-(`simple` / `medium` / `complex`) and resolves it to a concrete model **discovered at runtime** —
-never a hardcoded list:
-
-- **Local first:** the installed Ollama models are ranked by parameter size — smallest for
-  `simple`, largest for `complex`, median for `medium`. Nothing to configure; it adapts to
-  whatever you have pulled.
-- **Cloud fallback:** only when no compatible local model exists (e.g. an image needs a
-  vision-capable model and none is installed) does it fall back to a model discovered from the
-  9Router gateway (requires `JUDGE_API_KEY`).
-
-Override per call when you need control:
-
-```typescript
-await judgeResponse({ ...input, model: 'gh/claude-sonnet-4.6' }); // exact model (pins the judge)
-await judgeResponse({ ...input, tier: 'complex' }); // force a tier
-await judgeResponse({ ...input, verbose: true }); // attach routing trace to _meta
-```
-
-Set `JUDGE_MODEL` in `env/environments.json` to pin one model globally (disables auto-routing).
-Tune tiers, thresholds, and cloud preferences in `config/aiJudge.config.ts`.
-
-## 🔌 API Testing
-
-A layered structure keeps HTTP details in one place and tests readable. See
-[docs/API_TESTING.md](docs/API_TESTING.md); the example targets [Petstore v3](https://petstore3.swagger.io).
-
-```text
-tests/api/*.api.ts          # layer 3 — tests speak business language via services
-api/services/PetService.ts  # layer 2 — business operations (fetch, CRUD, derived queries)
-api/core/ApiClient.ts       # layer 1 — typed get/post/put/patch/delete over APIRequestContext
-```
-
-Tests run in the browser-free `api` project (`npm run test:api`), with the base URL from
-`API_BASE_URL`:
-
-```typescript
-import { test, expect } from '@fixtures/apiFixtures';
-
-test('available pets are all "available"', async ({ petService }) => {
-  const pets = await petService.findAvailable();
-  expect(pets.length).toBeGreaterThan(0);
-  expect(pets.every(p => p.status === 'available')).toBeTruthy();
-});
-```
-
-## 📱 Mobile Testing
-
-Mobile tests are [Maestro](https://maestro.mobile.dev) YAML flows orchestrated by Playwright (Maestro
-is the mobile engine, invoked via its CLI — no npm dependency). **Opt-in**: scaffold with `--mobile`.
-Tests read like the UI/API tests — see [docs/MOBILE_TESTING.md](docs/MOBILE_TESTING.md), plus the
-[Mobile Cheat Sheet](docs/MOBILE_CHEATSHEET.md) for device/app-id lookups and CLI commands.
-
-```typescript
-import { test } from '@fixtures/mobileFixtures';
-import { devices } from '@mobile/devices'; // typed device catalog — mobile/devices.ts
-
-test.describe('Login — Android', () => {
-  test.use({ mobile: devices.pixel7 }); // auto-boots the AVD if it isn't running
-
-  test('signs in', async ({ maestro }) => {
-    await maestro.run('tests/mobile/flows/android/login.yaml');
-  });
-});
-```
-
-Runs serially in the browser-free `mobile` project: `npm run test:mobile`. A catalogued `device`
-auto-boots (Android AVD / iOS simulator); with none available the tests **skip** (don't fail). No
-device yet? `npm run mobile:create-device` builds one from your installed SDK/Xcode. Test your own
-build by pointing `MOBILE_APP_ANDROID` / `MOBILE_APP_IOS` (path or URL) at an APK / `.app` — it's
-installed before the flow runs. Devices the framework auto-boots are shut down after the run
-(`MOBILE_KEEP_DEVICES=1` to keep them).
-
-**Real devices:** Android is supported — plug in a device (USB debugging on) and target it by serial
-(`device: 'RZ8N...'`); `adb install` handles your APK. **iOS real devices are not yet supported**:
-Maestro drives them via WebDriverAgent + `--team-id`, but that needs a signed `.ipa`, `xcrun
-devicectl` install, and physical-device discovery — and is currently blocked upstream on Xcode 26.4+
-([maestro#3218](https://github.com/mobile-dev-inc/maestro/issues/3218)). iOS testing today is
-simulator-only; real-device support is planned once the upstream build is fixed.
-
-## 📁 Project Structure
-
-```text
-playwright-ai-distro/
-├── .auth/                    # Storage state files (gitignored)
-├── .github/workflows/        # CI/CD pipelines
-├── .husky/                   # git hooks (pre-commit → lint-staged, commit-msg → commitlint)
-├── api/                      # API testing (3 layers)
-│   ├── core/ApiClient.ts     #   layer 1: typed get/post/put/patch/delete → ApiResponse<T>
-│   ├── services/             #   layer 2: business operations (PetService)
-│   └── models/               #   domain types (Pet, …)
-├── config/                   # Environment + judge config
-│   ├── loadEnv.ts
-│   ├── envUtils.ts
-│   └── aiJudge.config.ts     # tiers, thresholds, routing preferences
-├── docs/                     # AI_JUDGE.md · API_TESTING.md · MOBILE_TESTING.md · MOBILE_CHEATSHEET.md
-├── env/                      # environments.json (BASE_URL, API_BASE_URL)
-├── fixtures/                 # Playwright fixtures
-│   ├── globalFixtures.ts     #   test/expect + `session` storageState-key option
-│   ├── auth.ts               #   lazy session login + caching (authState, ensureSession)
-│   ├── aiExpect.ts           #   expectAi matchers
-│   ├── apiFixtures.ts        #   apiClient + service fixtures (browser-free)
-│   └── mobileFixtures.ts     #   maestro fixture + `mobile` option (opt-in)
-├── mobile/                   # Mobile testing (Maestro) — opt-in
-│   └── core/                 #   MaestroRunner + DeviceManager (adb/simctl, auto-boot)
-├── pages/                    # Page Object Models (BasePage, LoginPage)
-├── testData/                 # users.json (named login sessions)
-├── tests/
-│   ├── example/              #   UI + AI Judge examples
-│   ├── api/                  #   API examples (*.api.ts)
-│   └── mobile/               #   Maestro flows + *.mobile.ts (opt-in)
-├── utils/
-│   ├── ai/                   #   AI Judge engine (router, providers, judge)
-│   ├── aiJudge.ts            #   judge entrypoint (re-exports utils/ai)
-│   └── *.ts                  #   date/string/wait/validation helpers
-├── playwright.config.ts      # chromium + api (+ mobile when scaffolded)
-└── eslint.config.js · .prettierrc · .commitlintrc.json
-```
-
-## 🔐 Authentication
-
-Session-based, opt-in, and **lazy**. Declare named sessions in `testData/users.json`; a test opts in
-with `test.use({ session: 'admin' })`. The first test that uses a session logs in once and caches
-`.auth/<key>.json`; every later test and run reuses it — no repeated logins, no setup project.
-Unauthenticated tests (e.g. public pages) set nothing.
-
-```typescript
-// Select a session for a test or a whole describe:
-test.use({ session: 'admin' });
-
-test('admin sees the dashboard', async ({ page }) => {
-  await page.goto('/dashboard'); // already signed in as admin
-});
-```
-
-The login flow lives in `fixtures/auth.ts` → `loginSession` (customize it; the generic branch uses
-`pages/LoginPage` with credentials from `testData/users.json`). For cross-role tests, open
-independent contexts — `ensureSession` performs the lazy login first:
-
-```typescript
-import { authState, ensureSession } from '@fixtures/auth';
-await ensureSession(browser, 'admin');
-const adminCtx = await browser.newContext({ storageState: authState('admin') });
-```
-
-## 📊 Reporters
-
-- **HTML Report**: `playwright-report/`
-- **Allure Report**: `allure-results/`
-- **JSON Results**: `test-results/results.json`
-
-Generate Allure report:
+Working on the platform itself (this monorepo):
 
 ```bash
-npx allure generate allure-results -o allure-report --clean
-npx allure open allure-report
-```
-
-## 🛠️ Development
-
-```bash
-# Lint code
+npm install
+npm run build      # tsc -b (solution build across all packages)
 npm run lint
-
-# Fix lint issues
-npm run lint:fix
-
-# Format code
-npm run format
-
-# Type check
-npx tsc --noEmit
+npm run smoke      # scaffold a core-only project into a temp dir and verify it builds + runs
 ```
 
-Git hooks are wired via husky: **pre-commit** runs lint-staged (ESLint + Prettier on staged files)
-and **commit-msg** enforces [Conventional Commits](https://www.conventionalcommits.org) via
-commitlint (`.commitlintrc.json`). They activate after `npm install` in a git repo.
+Packages build in dependency order (`platform` → `core-template` → `create` → plugins). Plugins never import the core; they depend only on `@playwright/test` (peer), `@pwtap/platform`, and `process.env`.
 
-## 📝 Writing Tests
+## Releasing and publishing
 
-### Basic Test
+Versioning and publishing are [changesets](https://github.com/changesets/changesets)-driven and run from the **Release** GitHub Action (manual `workflow_dispatch`).
 
-```typescript
-import { test, expect } from '@fixtures/globalFixtures';
-import { LoginPage } from '@pages/LoginPage';
+1. Record a change: `npx changeset` — pick the affected packages and the bump level (`patch` / `minor` / `major`); the version number is computed for you.
+2. Trigger **Release**. With pending changesets it opens a **Version Packages** PR (bumps versions, writes changelogs).
+3. Merge that PR, then trigger **Release** again — it publishes the changed packages to npmjs.org and tags a GitHub Release.
 
-test('user can view dashboard', async ({ page }) => {
-  await page.goto('/dashboard');
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-});
-```
+Requires the `NPM_TOKEN` repo secret (an npm "Automation" token) and, for the Version PR, "Allow GitHub Actions to create and approve pull requests" enabled in the repo's Actions settings.
 
-### Test with a Different Session
+## Roadmap
 
-```typescript
-test.use({ session: 'admin' });
+- **Mobile** — `@pwtap/plugin-maestro` (Maestro flows), then `@pwtap/plugin-appium` (XCUITest / UiAutomator2).
+- **More engines** — `@pwtap/plugin-k6` (performance), `-desktop`, `-security`.
+- **Beyond macOS** — additive platform implementations behind `@pwtap/platform`.
 
-test('admin can access settings', async ({ page }) => {
-  await page.goto('/admin/settings');
-  await expect(page).toHaveURL(/settings/);
-});
-```
-
-### AI Judge Test
-
-```typescript
-import { judgeResponse } from '@utils/aiJudge';
-
-test('AI provides helpful response', async ({ page }) => {
-  // Interact with chatbot
-  await page.fill('[data-testid="chat-input"]', 'How do I reset my password?');
-  await page.click('[data-testid="send-button"]');
-
-  // Get bot response
-  const response = await page.locator('[data-testid="bot-message"]').last().textContent();
-
-  // Judge the response
-  const verdict = await judgeResponse({
-    userMessage: 'How do I reset my password?',
-    botResponse: response || '',
-    rubric: 'Must explain password reset process with clear steps.',
-  });
-
-  expect(verdict.pass, verdict.reasoning).toBeTruthy();
-  expect(verdict.score).toBeGreaterThan(70);
-});
-```
-
-## 🌐 CI/CD
-
-GitHub Actions workflow includes:
-
-- Automatic Ollama setup for AI Judge
-- Multi-browser testing
-- Allure report generation
-- Artifact uploads
-
-Trigger manually with custom options:
-
-```yaml
-workflow_dispatch:
-  inputs:
-    environment: dev|staging|production
-    judge_model: <optional pin, e.g. local/qwen3.5; empty = auto-routing>
-    browser: chromium|firefox|webkit|all
-```
-
-## 📚 Documentation
-
-- [AI Judge Guide](docs/AI_JUDGE.md) - Detailed AI Judge documentation
-- [API Testing Guide](docs/API_TESTING.md) - Layered API client/service/test structure
-- [Mobile Testing Guide](docs/MOBILE_TESTING.md) - Maestro flows orchestrated by Playwright
-- [Mobile Cheat Sheet](docs/MOBILE_CHEATSHEET.md) - device/app IDs, boot & install commands, Maestro CLI
-- [Playwright Docs](https://playwright.dev/docs/intro) - Official Playwright docs
-
-## 📄 License
+## License
 
 MIT
