@@ -45,16 +45,35 @@ npm run test:maestro          # MAESTRO=1 playwright test --project=maestro
 
 A bare `npm test` stays UI + API — the `maestro` project is gated behind `MAESTRO=1`.
 
-## Devices
+## Parallel (the device pool)
 
-Select with `test.use({ mobile })`: a named `device` (Android AVD / iOS simulator name or UDID) auto-boots if not running; omit it to use any booted device. **When no matching device is available the test skips (never fails).** Create one from your installed SDK/Xcode:
+The `maestro` project is `fullyParallel`, and each test reserves its device with a cross-process
+lock (`<platform>:<device>`). That pairing **is** the device pool: tests on the **same** device
+serialize (they wait, not skip); tests on **different** devices or platforms run **concurrently**.
+Give each test its device and run with workers:
 
 ```bash
-npm run mobile:create-device      # interactive
-npm run mobile:stop-devices       # shut down the ones the framework auto-booted
+MAESTRO=1 npx playwright test --project=maestro --workers=3
 ```
 
-Parallel: give each test its device and pass `--workers=N` — same device serializes (a cross-process lock), different devices run in parallel.
+Concurrent flows across devices need Maestro ≳ 2.6 (older builds pin a fixed driver port); on older
+Maestro the plugin falls back to a single shared lock so `--workers>1` stays safe. Force with
+`MOBILE_PARALLEL=1`.
+
+## Devices
+
+Select with `test.use({ mobile })`: a named `device` (Android AVD / iOS simulator name or UDID)
+auto-boots if not running; omit it to use any booted device. **When no matching device is available
+the test skips (never fails).**
+
+```bash
+npm run mobile:create-device      # create an AVD / simulator (interactive)
+npm run mobile:stop-devices       # manually shut down framework-booted devices
+```
+
+Devices the framework **auto-booted** are shut down **automatically** after the run by the
+`maestro-teardown` project (headed or headless) — set `MOBILE_KEEP_DEVICES=1` to keep them for faster
+reruns. Devices you booted yourself are left running.
 
 ## Requirements
 

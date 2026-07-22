@@ -35,8 +35,11 @@ export const manifest = {
   playwrightProject: {
     gateVar: 'maestroEnabled',
     gate: "const maestroEnabled = process.env.MAESTRO === '1';",
+    // fullyParallel + a per-device lock (in the fixture) = the device pool: tests on the SAME device
+    // serialize, DIFFERENT devices/platforms run concurrently (with --workers). `teardown` runs the
+    // maestro-teardown project after the run, shutting down framework-booted devices automatically.
     project:
-      "...(maestroEnabled ? [{ name: 'maestro', testMatch: /.*\\.mobile\\.ts$/, fullyParallel: false }] : [])",
+      "...(maestroEnabled ? [{ name: 'maestro', testMatch: /.*\\.mobile\\.ts$/, fullyParallel: true, teardown: 'maestro-teardown' }, { name: 'maestro-teardown', testMatch: /maestro\\.teardown\\.ts$/ }] : [])",
   },
   examples: [
     { src: 'templates/tests', dest: 'tests/maestro' },

@@ -49,18 +49,26 @@ test.use({ mobile: devices.android }); // any booted android device
 - `headless` — hidden by default; `false` shows the emulator window / Simulator app.
 - `app` — a local path or http(s) URL to an APK / iOS `.app`/`.zip`, installed once before the flow.
 
-Create devices from your installed toolchain with `npm run mobile:create-device`; shut down
-auto-booted ones with `npm run mobile:stop-devices`.
+Create devices from your installed toolchain with `npm run mobile:create-device`. Devices the
+framework auto-booted are shut down **automatically** after the run by the `maestro-teardown` project
+(headed or headless); `npm run mobile:stop-devices` does it manually. Set `MOBILE_KEEP_DEVICES=1` to
+keep auto-booted devices for faster reruns. Devices you booted yourself are left running.
 
-## Running
+## Running & parallelism
 
 ```bash
-npm run test:maestro    # MAESTRO=1 playwright test --project=maestro
+npm run test:maestro                                   # MAESTRO=1 playwright test --project=maestro
+MAESTRO=1 npx playwright test --project=maestro --workers=3   # parallel across devices
 ```
 
 A bare `npm test` runs only chromium + api — the `maestro` project is gated behind `MAESTRO=1`.
-For parallelism, give each test its own device and pass `--workers=N`: tests on the same device
-serialize via a cross-process lock; different devices run concurrently (needs Maestro ≳ 2.6).
+
+The `maestro` project is `fullyParallel`, and each test reserves its device with a cross-process lock
+keyed `<platform>:<device>` — **this is the device pool**: same device → serialize (wait, not skip),
+different devices/platforms → run concurrently. Give each test its own device and add `--workers=N`.
+Concurrent flows across devices need Maestro ≳ 2.6 (older builds pin a fixed driver port and clash);
+on older Maestro the plugin falls back to one shared lock so `--workers>1` stays safe (no speedup).
+Force the behavior with `MOBILE_PARALLEL=1` / `0`.
 
 ## Screenshots and the AI judge
 
