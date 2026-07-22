@@ -37,7 +37,8 @@
         "api",
         "ui",
         "ai",
-        "release"
+        "release",
+        "maestro"
       ]
     ],
     "scope-case": [2, "always", "lower-case"],
