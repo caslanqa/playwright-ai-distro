@@ -9,6 +9,8 @@ export interface MaestroStep {
   status: string;
   /** Command duration in ms (from Maestro). */
   durationMs: number;
+  /** The exact JSON entry Maestro wrote for this command (command + metadata) — the step's real log. */
+  raw: Record<string, unknown>;
 }
 
 /**
@@ -47,7 +49,12 @@ export function parseMaestroSteps(outputDir: string): MaestroStep[] {
       continue; // internal setup command (config/variables) — not a user-facing step
     }
     const meta = (entry.metadata ?? {}) as { status?: string; duration?: number };
-    steps.push({ label, status: meta.status ?? 'UNKNOWN', durationMs: meta.duration ?? 0 });
+    steps.push({
+      label,
+      status: meta.status ?? 'UNKNOWN',
+      durationMs: meta.duration ?? 0,
+      raw: entry,
+    });
   }
   return steps;
 }

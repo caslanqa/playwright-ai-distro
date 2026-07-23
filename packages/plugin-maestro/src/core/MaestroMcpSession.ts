@@ -29,12 +29,14 @@ export type MaestroDirection = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
  */
 export type ScreenshotMode = 'off' | 'only-on-failure' | 'on';
 
-/** Resolve the screenshot mode from `MOBILE_SCREENSHOT` (default `only-on-failure`). */
-export function resolveScreenshotMode(): ScreenshotMode {
-  const value = process.env.MOBILE_SCREENSHOT?.trim().toLowerCase();
-  return value === 'on' || value === 'off' || value === 'only-on-failure'
-    ? value
-    : 'only-on-failure';
+/**
+ * Whether to attach a command's real log (the YAML sent + Maestro's raw response) even when it
+ * SUCCEEDED, from `MOBILE_STEP_LOGS`. A failing command always attaches its log regardless of this
+ * setting — this only controls the success-path noise.
+ */
+export function resolveVerboseStepLogs(): boolean {
+  const value = process.env.MOBILE_STEP_LOGS?.trim();
+  return value ? /^(1|true|yes|on)$/i.test(value) : false;
 }
 
 /**
@@ -51,10 +53,14 @@ export interface McpSessionHooks {
   /** Directory to write screenshots/hierarchy into (Playwright copies attachments from here). */
   outputDir: string;
   /**
-   * Attach a file to the CURRENT step (maps to `testInfo.attach`) — so a failure screenshot / the
-   * per-step timeline shows in context, in both the HTML report and the trace viewer.
+   * Attach a file or inline value to the CURRENT step (maps to `testInfo.attach`) — so a failure
+   * screenshot, the per-step timeline, or a command's real log shows in context, in both the HTML
+   * report and the trace viewer. Either `path` or `body` (never both) — mirrors `TestInfo.attach`.
    */
-  report: (name: string, attachment: { path: string; contentType: string }) => Promise<void>;
+  report: (
+    name: string,
+    attachment: { path?: string; body?: string | Buffer; contentType?: string },
+  ) => Promise<void>;
 }
 
 /**
@@ -76,24 +82,41 @@ export interface McpSessionHooks {
  * if (await maestro.isVisible('Cookie banner')) await maestro.tapOn('Accept');
  * await maestro.assertVisible('Dashboard');
  */
+/** Optional {@link MaestroMcpSession} construction settings — all have sane standalone defaults. */
+export interface MaestroSessionOptions {
+  /** When to capture screenshots + hierarchy. Default `'only-on-failure'`. */
+  screenshotMode?: ScreenshotMode;
+  /** Maestro executable. Default: `MAESTRO_BIN` env, or `maestro` on PATH. */
+  binary?: string;
+  /** Attach a command's real log even on success. Default: `MOBILE_STEP_LOGS` env. */
+  verboseLogs?: boolean;
+}
+
 export class MaestroMcpSession {
   private client: McpClient | undefined;
   private appId: string | undefined;
   /** Counter for unique per-step screenshot names when the mode is `on`. */
   private shotCount = 0;
+  private readonly screenshotMode: ScreenshotMode;
+  private readonly binary: string;
+  private readonly verboseLogs: boolean;
 
   /**
    * @param device The booted device this session drives.
    * @param hooks Report/attachment hooks from the fixture.
-   * @param screenshotMode When to capture screenshots + hierarchy; defaults to `MOBILE_SCREENSHOT`.
-   * @param binary Maestro executable; defaults to `MAESTRO_BIN` env or `maestro` on PATH.
+   * @param options Screenshot mode / Maestro binary / verbose-log overrides — see
+   *   {@link MaestroSessionOptions}. The fixture passes `screenshotMode` explicitly (resolved from
+   *   Playwright's own `screenshot` option); bespoke callers can omit it for the standalone default.
    */
   constructor(
     private readonly device: DiscoveredDevice,
     private readonly hooks: McpSessionHooks,
-    private readonly screenshotMode: ScreenshotMode = resolveScreenshotMode(),
-    private readonly binary: string = process.env.MAESTRO_BIN || 'maestro',
-  ) {}
+    options: MaestroSessionOptions = {},
+  ) {
+    this.screenshotMode = options.screenshotMode ?? 'only-on-failure';
+    this.binary = options.binary ?? (process.env.MAESTRO_BIN || 'maestro');
+    this.verboseLogs = options.verboseLogs ?? resolveVerboseStepLogs();
+  }
 
   /** Spawn `maestro mcp` and complete the MCP handshake on first use; reused on later calls. */
   private async ensureClient(): Promise<McpClient> {
@@ -246,10 +269,13 @@ export class MaestroMcpSession {
     const timeout = options?.timeout ?? DEFAULT_VISIBLE_TIMEOUT_MS;
     return this.hooks.step(`isVisible ${label(selector)}`, async () => {
       const wait = { visible: selector, timeout: String(timeout) };
-      const result = await this.runYaml(
-        `- extendedWaitUntil: ${json(wait)}`,
-        timeout + COMMAND_TIMEOUT_MS,
-      );
+      const commandYaml = `- extendedWaitUntil: ${json(wait)}`;
+      const result = await this.runYaml(commandYaml, timeout + COMMAND_TIMEOUT_MS);
+      // `result.isError` here just means "not visible yet" — an expected outcome, not a real
+      // failure — so log it only when verbose, never unconditionally like a genuine failure.
+      if (this.verboseLogs) {
+        await this.attachCommandLog(commandYaml, result);
+      }
       return !result.isError;
     });
   }
@@ -279,6 +305,9 @@ export class MaestroMcpSession {
   private async fetchScreen(): Promise<MaestroScreen> {
     const client = await this.ensureClient();
     const result = await client.callTool('inspect_screen', { device_id: this.device.id });
+    if (result.isError || this.verboseLogs) {
+      await this.attachCommandLog('- inspect_screen', result);
+    }
     if (result.isError) {
       throw maestroError(reason(result));
     }
@@ -318,6 +347,9 @@ export class MaestroMcpSession {
    */
   private async runCommand(commandYaml: string, timeoutMs?: number): Promise<void> {
     const result = await this.runYaml(commandYaml, timeoutMs);
+    if (result.isError || this.verboseLogs) {
+      await this.attachCommandLog(commandYaml, result);
+    }
     if (result.isError) {
       if (this.screenshotMode !== 'off') {
         await this.captureScreenshot('failure');
@@ -327,6 +359,22 @@ export class MaestroMcpSession {
     }
     if (this.screenshotMode === 'on') {
       await this.captureScreenshot(`step-${++this.shotCount}`);
+    }
+  }
+
+  /**
+   * Attach the command sent + Maestro's raw MCP response to the CURRENT step as `maestro-step-log` —
+   * the real, unedited record of what ran and what came back, alongside the synthesized step title.
+   * Best-effort: a logging failure must never mask the actual command result.
+   */
+  private async attachCommandLog(commandYaml: string, result: McpToolResult): Promise<void> {
+    try {
+      await this.hooks.report('maestro-step-log', {
+        body: formatMcpLog(commandYaml, result),
+        contentType: 'text/plain',
+      });
+    } catch {
+      /* best-effort — never let log attachment mask the real result */
     }
   }
 
@@ -420,6 +468,17 @@ function reason(result: McpToolResult): string {
       .replace(/^Failed to run flow:\s*/, '')
       .trim() || '[maestro] command failed'
   );
+}
+
+/** The real, unedited record of one MCP round-trip: the command sent + Maestro's raw response. */
+function formatMcpLog(commandYaml: string, result: McpToolResult): string {
+  return [
+    'Command sent to `maestro mcp`:',
+    commandYaml.trim(),
+    '',
+    `Result: ${result.isError ? 'ERROR' : 'OK'}`,
+    textOf(result).trim() || '(no response text)',
+  ].join('\n');
 }
 
 /** A short step-title fragment for a selector (`"text"`, or the object's key value / JSON). */

@@ -239,13 +239,14 @@ To build locally and install into a throwaway project **without publishing** (th
 
 ## Releasing and publishing
 
-Versioning and publishing are [changesets](https://github.com/changesets/changesets)-driven and run from the **Release** GitHub Action (manual `workflow_dispatch`).
+Versioning and publishing are [changesets](https://github.com/changesets/changesets)-driven, run from the **Release** GitHub Action — manual, one-shot (`workflow_dispatch`, no Version PR, no separate merge step) and branch-aware.
 
 1. Record a change: `npx changeset` — pick the affected packages and the bump level (`patch` / `minor` / `major`); the version number is computed for you.
-2. Trigger **Release**. With pending changesets it opens a **Version Packages** PR (bumps versions, writes changelogs).
-3. Merge that PR, then trigger **Release** again — it publishes the changed packages to npmjs.org and tags a GitHub Release.
+2. Trigger **Release** from the Actions tab, choosing which branch to run it from:
+   - **From `main`** — the stable release. Bumps versions, writes changelogs, commits the bump to main, publishes to npm's `latest` tag, and pushes the release tags. One click, no PR to merge.
+   - **From any other branch** — a throwaway **snapshot** release (changesets' own mechanism for this). Publishes under an npm tag derived from the branch name (e.g. `feat/my-thing` → `feat-my-thing`) with a unique `0.0.0-<tag>-<timestamp>` version. `latest` is never touched and nothing is committed — install a branch build with `npm install @pwtap/<pkg>@<branch-tag>`.
 
-Requires the `NPM_TOKEN` repo secret (an npm "Automation" token) and, for the Version PR, "Allow GitHub Actions to create and approve pull requests" enabled in the repo's Actions settings.
+Requires the `NPM_TOKEN` repo secret (an npm "Automation" token) and, for the main-branch version-bump commit, permission for `github-actions[bot]` to push to `main` (add it to the branch protection rule's bypass list if `main` requires a PR). Branch snapshot releases never push to git, so that requirement doesn't apply to them.
 
 ## Roadmap
 

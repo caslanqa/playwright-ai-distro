@@ -1,17 +1,41 @@
 name: Release
 
+# Manual, one-shot release — no Version PR, no manual merge. Branch-aware:
+#   • On `main`            → the normal stable release. Applies any pending changesets (bump
+#     versions, write changelogs), commits the bump to main, publishes to the npm `latest` tag,
+#     and pushes the release tags.
+#   • On any OTHER branch  → a throwaway SNAPSHOT release (changesets' own mechanism for exactly
+#     this: https://github.com/changesets/changesets/blob/main/docs/snapshot-releases.md). Versions
+#     become `0.0.0-<branch-tag>-<timestamp>` and publish under an npm dist-tag DERIVED FROM THE
+#     BRANCH NAME — `latest` is never touched, and NOTHING is committed or pushed to the branch (the
+#     version bump is throwaway, scoped to this run only). Install a branch build with
+#     `npm install @pwtap/<pkg>@<branch-tag>`. Requires the branch's own pending changesets (same
+#     `npx changeset` you'd add for a normal release) — no changesets, no packages to snapshot.
+#
+# Trigger from the Actions tab (Release → Run workflow), choosing the branch to run from — or
+# `gh workflow run release.yml --ref <branch>`.
+#
+# Requires:
+#   • repo secret NPM_TOKEN — an npm "Automation" access token (bypasses 2FA in CI).
+#   • (main only) permission for this workflow to push to `main`. If `main` is protected with
+#     "Require a pull request before merging", add github-actions[bot] to the bypass list (Settings →
+#     Branches → rule → "Allow specified actors to bypass required pull requests"). Branch snapshot
+#     releases never push to git, so this doesn't affect them.
 on:
   workflow_dispatch:
 
 concurrency:
-  group: release
+  # Scoped per branch/ref — a branch snapshot release never queues behind another branch's (or
+  # main's) release; two triggers on the SAME ref still serialize against each other.
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: write # (main only) commit version bumps to main + push tags / GitHub Releases
 
 jobs:
   release:
+    # Never run on forks — publishing belongs to the canonical repo only.
     if: github.repository == 'caslanqa/test-automation-platform'
     runs-on: ubuntu-latest
     steps:
@@ -30,28 +54,50 @@ jobs:
       - name: Build all packages
         run: npm run build
 
-      - name: Version, commit, and publish
+      - name: Version and publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          HUSKY: '0'
+          HUSKY: '0' # skip local git hooks for the automated release commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Apply pending changesets: bump versions, write changelogs, delete the changeset files.
-          npx changeset version
-          npm install --package-lock-only --ignore-scripts
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            echo "== Stable release from main -> npm tag 'latest' =="
 
-          # Commit + push the bump to main FIRST (so a later publish failure is recoverable on re-run).
-          # Skipped when there was nothing to version (publish-only runs).
-          if git diff --quiet && git diff --cached --quiet; then
-            echo "No version changes to commit — publish-only run."
+            # Apply pending changesets: bump versions, write changelogs, delete the changeset files.
+            npx changeset version
+            npm install --package-lock-only --ignore-scripts
+
+            # Commit + push the bump to main FIRST (so a later publish failure is recoverable on
+            # re-run). Skipped when there was nothing to version (publish-only runs).
+            if git diff --quiet && git diff --cached --quiet; then
+              echo "No version changes to commit -- publish-only run."
+            else
+              git add -A
+              git commit -m "chore(release): version packages [skip ci]"
+              git push origin HEAD:main
+            fi
+
+            # Publish every package whose version isn't on npm yet, then push the release tags.
+            npx changeset publish
+            git push origin --tags
           else
-            git add -A
-            git commit -m "chore(release): version packages [skip ci]"
-            git push origin HEAD:main
-          fi
+            # Branch snapshot: derive an npm-safe dist-tag from the branch name
+            # (feat/foo-bar -> feat-foo-bar), then version+publish as a throwaway snapshot. Nothing
+            # is committed or pushed -- the bumped package.json/CHANGELOG changes live only in this
+            # run's checkout and are discarded when the job ends.
+            TAG=$(echo "${GITHUB_REF_NAME}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed 's/^-*//; s/-*$//')
+            if [ -z "$TAG" ]; then
+              echo "Could not derive a valid npm tag from branch '${GITHUB_REF_NAME}'." >&2
+              exit 1
+            fi
+            echo "== Snapshot release from '${GITHUB_REF_NAME}' -> npm tag '${TAG}' (latest untouched) =="
 
-          # Publish every package whose version isn't on npm yet, then push the release tags.
-          npx changeset publish
-          git push origin --tags
+            npx changeset version --snapshot "$TAG"
+            npx changeset publish --no-git-tag --tag "$TAG"
+
+            echo ""
+            echo "Published under npm tag '${TAG}'. Install with, e.g.:"
+            echo "  npm install @pwtap/create@${TAG}"
+          fi
