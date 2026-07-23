@@ -17,6 +17,7 @@ export { maestroError } from './core/maestroError.js';
 export {
   MaestroMcpSession,
   resolveScreenshotMode,
+  resolveVerboseStepLogs,
   type MaestroDirection,
   type McpSessionHooks,
   type ScreenshotMode,

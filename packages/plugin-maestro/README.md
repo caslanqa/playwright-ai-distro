@@ -75,6 +75,17 @@ Devices the framework **auto-booted** are shut down **automatically** after the 
 `maestro-teardown` project (headed or headless) — set `MOBILE_KEEP_DEVICES=1` to keep them for faster
 reruns. Devices you booted yourself are left running.
 
+## Report — real per-step logs
+
+Every step's log is the actual data Maestro produced for it, not a synthesized summary:
+
+- **Imperative** — the command sent + Maestro's raw MCP response text.
+- **Batch YAML** — the exact JSON entry Maestro recorded for that command (command + metadata).
+
+A failing step **always** attaches its log; on success it's opt-in (`MOBILE_STEP_LOGS=1`) so passing
+runs stay quiet by default. On failure, imperative commands also attach a screenshot + view hierarchy
+at the point of failure (`MOBILE_SCREENSHOT=on` captures one after every command instead).
+
 ## Requirements
 
 - **Maestro CLI** + a **JDK 17+**.

@@ -70,6 +70,18 @@ Concurrent flows across devices need Maestro ≳ 2.6 (older builds pin a fixed d
 on older Maestro the plugin falls back to one shared lock so `--workers>1` stays safe (no speedup).
 Force the behavior with `MOBILE_PARALLEL=1` / `0`.
 
+## Report — real per-step logs
+
+Every replayed step attaches the actual data Maestro produced for it (`maestro-step-log`), not a
+synthesized summary:
+
+- **Imperative** — the exact YAML command sent over MCP + Maestro's raw response text for that call.
+- **Batch YAML** — the exact JSON entry from Maestro's `debug/commands-*.json` for that command (the
+  same source the step's label/status/duration come from, in full).
+
+A **failing** step always attaches its log. On a **passing** step it's opt-in — set
+`MOBILE_STEP_LOGS=1` to attach one on every step too.
+
 ## Screenshots and the AI judge
 
 `maestro.takeScreenshot(name)` attaches the image to the report and returns its path — pipe it into
@@ -85,6 +97,7 @@ Set `MOBILE_SCREENSHOT=on` to capture after every command (a visual timeline), o
 | `MOBILE_HEADLESS`                       | `true` (default) hides the device; `false` shows it              |
 | `MOBILE_APP_ANDROID` / `MOBILE_APP_IOS` | App under test (path or URL), installed before the flow          |
 | `MOBILE_SCREENSHOT`                     | `only-on-failure` (default) / `on` / `off`                       |
+| `MOBILE_STEP_LOGS`                      | Attach a step's real log on success too (default: failure only)  |
 | `MOBILE_KEEP_DEVICES`                   | Keep auto-booted devices after the run (faster reruns)           |
 | `MAESTRO_BIN`                           | Path to the Maestro binary (defaults to `maestro` on PATH)       |
 

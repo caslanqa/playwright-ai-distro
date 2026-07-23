@@ -10,7 +10,7 @@ import { ensureAppInstalled } from './core/appInstaller.js';
 import { recordBootedDevice } from './core/booted.js';
 import { maestroError } from './core/maestroError.js';
 import type { MaestroDirection } from './core/MaestroMcpSession.js';
-import { MaestroMcpSession } from './core/MaestroMcpSession.js';
+import { MaestroMcpSession, resolveVerboseStepLogs } from './core/MaestroMcpSession.js';
 import { maestroFailureDetail, parseMaestroSteps } from './core/maestroReport.js';
 import { MaestroRunner, maestroSupportsParallel } from './core/MaestroRunner.js';
 import type { MaestroScreen, MaestroSelector } from './core/types.js';
@@ -263,13 +263,27 @@ export const test = base.extend<MobileOptions & MobileFixtures>({
             const detail =
               maestroFailureDetail(result.outputDir) ||
               result.stderr.trim().split('\n').slice(-20).join('\n');
+            const verboseStepLogs = resolveVerboseStepLogs();
             for (const step of parseMaestroSteps(result.outputDir)) {
               const title = step.durationMs ? `${step.label} (${step.durationMs}ms)` : step.label;
               // Replay each Maestro command as a native step. We deliberately DON'T pass `{ box: true }`:
               // box would re-attribute the failure to the step's call site and print a code frame;
               // maestroError (stack = message only) keeps the failing step showing just the reason.
-              await base.step(title, () => {
-                if (step.status !== 'COMPLETED' && step.status !== 'WARNED') {
+              await base.step(title, async () => {
+                const failed = step.status !== 'COMPLETED' && step.status !== 'WARNED';
+                // The step's real log: Maestro's exact recorded command + metadata for this step —
+                // not just the label/status we synthesize. Always on failure, opt-in on success.
+                if (failed || verboseStepLogs) {
+                  try {
+                    await testInfo.attach('maestro-step-log', {
+                      body: JSON.stringify(step.raw, null, 2),
+                      contentType: 'application/json',
+                    });
+                  } catch {
+                    /* best-effort — never let log attachment mask the real result */
+                  }
+                }
+                if (failed) {
                   throw maestroError(`[maestro] step "${step.label}" ${step.status}\n${detail}`);
                 }
               });

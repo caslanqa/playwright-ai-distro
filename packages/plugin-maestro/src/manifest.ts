@@ -25,6 +25,7 @@ export const manifest = {
     MOBILE_APP_ANDROID: '',
     MOBILE_APP_IOS: '',
     MOBILE_SCREENSHOT: 'only-on-failure',
+    MOBILE_STEP_LOGS: '',
     MOBILE_KEEP_DEVICES: '',
     MAESTRO_BIN: '',
   },
